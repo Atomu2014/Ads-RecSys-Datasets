@@ -53,8 +53,8 @@ After one-hot encoding, the feature space approximates 900k.
 
 No negative down sampling, and no removing long-tail data. We preserve most of the information in this engineering.
 
-The train/test sets are officially partitioned, train set size: 15M, test set size: 4M.
-Positive sample ratio is 0.00075 on train set, and 0.00073 on test set.
+The train/test sets are officially partitioned, `train set size: 15M`, `test set size: 4M`.
+`Positive sample ratio` is `0.00075` on train set, and `0.00073` on test set.
 
 ### Criteo
 The feature engineering is contributed by @tianyao chen, and he has done most of the works including hdf access in [APEXDatasets](https://github.com/try-skycn/APEXDatasets). 
@@ -73,5 +73,17 @@ Nagetive sown sampling is used, and the resulting positive sample ratio is about
 After one-hot encoding, the feature space approximates 1M.
 
 The train/test sets are partitioned by us. We use one week data to train, and following 1 day to test.
-train set size: 86M, test set size: 12M.
-Positive sample ratio is 0.50 on train set, and 0.49 on test set.
+`train set size: 86M`, `test set size: 12M`.
+`Positive sample ratio` is `0.50` on train set, and `0.49` on test set.
+
+### MovieLens
+
+already done, need to update
+
+### NetFlix
+
+already done, need to update
+
+### Yahoo Music
+
+already done, need to update
