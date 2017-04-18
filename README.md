@@ -8,13 +8,13 @@ This repository will be long-term maintained.
 ## Basic Usage
 This repository is located at /NAS/Dataset.
   
-  sudo mount -t nfs 172.16.2.30:/mnt/NAS/Dataset/Ads-RecSys-Datasets /your/local/path
+    sudo mount -t nfs 172.16.2.30:/mnt/NAS/Dataset/Ads-RecSys-Datasets /your/local/path
 
 Then you can import this repository in python directly:
 
-  import sys
-  sys.path.append('/your/local/path')
-  from datasets import iPinYou, ...
+    import sys
+    sys.path.append('/your/local/path')
+    from datasets import iPinYou, ...
   
 We may support python3 access in the future.
 
@@ -37,7 +37,7 @@ we re-organized the feature alignment and removed the `user-tag` feature conside
 
 In general, this dataset contains 16 categorical features:
 
-  ['weekday', 'hour', 'IP', 'region', 'city', 'adexchange', 'domain',
+    ['weekday', 'hour', 'IP', 'region', 'city', 'adexchange', 'domain',
     'slotid', 'slotwidth', 'slotheight', 'slotvisibility', 'slotformat',
     'creative', 'advertiser', 'useragent', 'slotprice']
     
@@ -47,8 +47,9 @@ Even though the original data log has over 30 features, we don't use all of them
 
 - some features are unique IDs appearing only once, which does no help in prediction.
 - some of them are auction/impression related prices WHICH CANNOT BE USED IN PREDICTION.
+- user tags have leaky concerns.
 
-After one-hot encoding, the feature space approximates 90k.
+After one-hot encoding, the feature space approximates 900k.
 
 No negative down sampling, and no removing long-tail data. We preserve most of the information in this engineering.
 
@@ -56,3 +57,21 @@ The train/test sets are officially partitioned, train set size: 15M, test set si
 Positive sample ratio is 0.00075 on train set, and 0.00073 on test set.
 
 ### Criteo
+The feature engineering is contributed by @tianyao chen, and he has done most of the works including hdf access in [APEXDatasets](https://github.com/try-skycn/APEXDatasets). 
+His work is collected in this repository with some issues fixed and better wrapped.
+
+The original dataset is know as `Criteo 1TB click log`, in which the CriteoLab has collected 30 days of masked data.
+We only know there are 13 numerical and 26 categorical features, and there is no feature description released.
+Thus we name thease features as `num_0 ... num_12`, and `cat_0 ..., cat_25`.
+
+For numerical features, @tianyao chen discretized them by equal-size buckets, referring [APEXDatasets](https://github.com/try-skycn/APEXDatasets). 
+
+For categorical features, he removed long-tailed data appearing less than 20 times.
+
+Nagetive sown sampling is used, and the resulting positive sample ratio is about 0.5.
+
+After one-hot encoding, the feature space approximates 1M.
+
+The train/test sets are partitioned by us. We use one week data to train, and following 1 day to test.
+train set size: 86M, test set size: 12M.
+Positive sample ratio is 0.50 on train set, and 0.49 on test set.
