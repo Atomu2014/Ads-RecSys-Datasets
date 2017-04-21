@@ -15,9 +15,35 @@ Then you can import this repository in python directly:
     import sys
     sys.path.append('/your/local/path')
     from datasets import iPinYou, ...
-  
-We may support python3 access in the future.
+    
+    data = iPinYou()
+    data.summary()
+    train_gen = data.batch_generator('train')
+    
+Or if you want your code run on local/remote machines without change:
+    
+    # create __init__.py
+    import getpass
 
+    config = {}
+    
+    # some way you can identify which machine it is
+    user = getpass.getuser()
+    config['user'] = user
+    
+    if user.lower() == 'your user name in local machine':
+        config['env'] = 'cpu'
+    else:
+        config['env'] = 'gpu'
+        
+    # when using
+    import __init__
+    if __init__.config['env'] == 'cpu':
+        sys.path.append('/your/local/path')
+    else:
+        sys.path.append('/NAS/Dataset/Ads-RecSys-Datasets')
+    from datasets import iPinYou, Criteo
+  
 ## Datasets
 This section will introduce the hdf5 interfaces, and feature engineering in detail.
 

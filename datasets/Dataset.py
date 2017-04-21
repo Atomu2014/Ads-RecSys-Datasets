@@ -109,19 +109,19 @@ class Dataset:
         summarize the data set.
         :return: 
         """
-        print self.__class__.__name__, 'data set summary:'
-        print 'train set: ', self.train_size
-        print '\tpositive samples: ', self.train_pos_samples
-        print '\tnegative samples: ', self.train_neg_samples
-        print '\tpositive ratio: ', self.train_pos_ratio
-        print 'test size:', self.test_size
-        print '\tpositive samples: ', self.test_pos_samples
-        print '\tnegative samples: ', self.test_neg_samples
-        print '\tpositive ratio: ', self.test_pos_ratio
-        print 'input max length = %d, number of categories = %d' % (self.max_length, self.num_features)
-        print 'features\tmin_index\tsize'
+        print(self.__class__.__name__, 'data set summary:')
+        print('train set: ', self.train_size)
+        print('\tpositive samples: ', self.train_pos_samples)
+        print('\tnegative samples: ', self.train_neg_samples)
+        print('\tpositive ratio: ', self.train_pos_ratio)
+        print('test size:', self.test_size)
+        print('\tpositive samples: ', self.test_pos_samples)
+        print('\tnegative samples: ', self.test_neg_samples)
+        print('\tpositive ratio: ', self.test_pos_ratio)
+        print('input max length = %d, number of categories = %d' % (self.max_length, self.num_features))
+        print('features\tmin_index\tsize')
         for i in range(len(self.feat_names)):
-            print '%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i])
+            print('%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i]))
 
     def _iterate_hdf_files_(self, gen_type='train', num_of_parts=None):
         """
@@ -192,9 +192,6 @@ class Dataset:
             if pos_ratio is None:
                 pos_ratio = 1.0 * number_of_pos / (number_of_pos + number_of_neg)
             if number_of_pos <= 0 or number_of_neg <= 0:
-                print self.train_size, start, stop
-                print 'invalid partition', X_all.shape, y_all.shape
-                print number_of_pos, number_of_neg
                 raise Exception('Invalid partition')
             pos_batchsize = int(batch_size * pos_ratio)
             neg_batchsize = batch_size - pos_batchsize

@@ -58,7 +58,7 @@ class iPinYou(Dataset):
                     os.path.join(self.raw_data_dir, 'test.txt'))
                 self.max_length = max(max_train_length, max_test_length)
                 self.num_features = max(max_train_feature, max_test_feature) + 1
-            print 'max length = %d, # features = %d' % (self.max_length, self.num_features)
+            print('max length = %d, # features = %d' % (self.max_length, self.num_features))
 
             self.train_num_of_parts = self.raw_to_feature(raw_file='train.txt',
                                                           input_feat_file='train_input.txt',
@@ -79,12 +79,12 @@ class iPinYou(Dataset):
                                 input_columns=self.feat_names,
                                 output_columns=['click'])
 
-        print 'Got hdf iPinYou data set, getting metadata...'
+        print('Got hdf iPinYou data set, getting metadata...')
         self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \
             self.bin_count(self.hdf_data_dir, 'train', self.train_num_of_parts)
         self.test_size, self.test_pos_samples, self.test_neg_samples, self.test_pos_ratio = \
             self.bin_count(self.hdf_data_dir, 'test', self.test_num_of_parts)
-        print 'Initialization finished!'
+        print('Initialization finished!')
 
     def raw_to_feature(self, raw_file, input_feat_file, output_feat_file):
         """
@@ -95,7 +95,7 @@ class iPinYou(Dataset):
         :param output_feat_file: The name of the feature output data file.
         :return:
         """
-        print 'Transferring raw', raw_file, 'data into feature', raw_file, 'data...'
+        print('Transferring raw', raw_file, 'data into feature', raw_file, 'data...')
         raw_file = os.path.join(self.raw_data_dir, raw_file)
         feature_input_file_name = os.path.join(self.feature_data_dir, input_feat_file)
         feature_output_file_name = os.path.join(self.feature_data_dir, output_feat_file)
@@ -154,7 +154,7 @@ class iPinYou(Dataset):
             for line in fin:
                 line_no += 1
                 if line_no % 100000 == 0:
-                    print '%d lines finished.' % (line_no)
+                    print('%d lines finished.' % (line_no))
                 fields = line.strip().split()
                 X_i = map(lambda x: int(x.split(':')[0]), fields[1:])
                 max_feature = max(max_feature, max(X_i))

@@ -44,7 +44,7 @@ class Criteo(Dataset):
         """
         self.initialized = initialized
         if not self.initialized:
-            print 'Got raw Criteo 8-day logs, initializing data set...'
+            print('Got raw Criteo 8-day logs, initializing data set...')
             self.raw_data_dir = os.path.join(dir_path, 'raw')
             self.feature_data_dir = os.path.join(dir_path, 'feature')
             self.hdf_data_dir = os.path.join(dir_path, 'hdf')
@@ -52,14 +52,14 @@ class Criteo(Dataset):
             self.num_features = num_features
             self.block_size = block_size
             if self.max_length is None or self.num_features is None:
-                print 'Getting the maximum length and # features...'
+                print('Getting the maximum length and # features...')
                 h5file = h5py.File(os.path.join(self.raw_data_dir, 'criteo'))
                 train_length = h5file['train'].shape[1]
                 test_length = h5file['test'].shape[1]
-                print 'train set:', h5file['train'].shape, 'test set:', h5file['test'].shape
+                print('train set:', h5file['train'].shape, 'test set:', h5file['test'].shape)
                 self.max_length = max(train_length, test_length)
                 self.num_features = sum(json.loads(h5file.attrs['sizes'])[1:])
-            print 'max length = %d, # features = %d' % (self.max_length, self.num_features)
+            print('max length = %d, # features = %d' % (self.max_length, self.num_features))
 
             self.train_num_of_parts = self.raw_to_feature(key='train',
                                                           input_feat_file='train_input.txt',
@@ -79,15 +79,15 @@ class Criteo(Dataset):
                                 hdf_data_dir=self.hdf_data_dir,
                                 input_columns=self.feat_names,
                                 output_columns=['click'])
-        print 'Got hdf Criteo-8d data set, getting metadata...'
+        print('Got hdf Criteo-8d data set, getting metadata...')
         self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \
             self.bin_count(self.hdf_data_dir, 'train', self.train_num_of_parts)
         self.test_size, self.test_pos_samples, self.test_neg_samples, self.test_pos_ratio = \
             self.bin_count(self.hdf_data_dir, 'test', self.test_num_of_parts)
-        print 'Initialization finished!'
+        print('Initialization finished!')
 
     def raw_to_feature(self, key, input_feat_file, output_feat_file):
-        print 'Transferring raw', key, 'data into feature', key, 'data...'
+        print('Transferring raw', key, 'data into feature', key, 'data...')
 
         input_feat_file = os.path.join(self.feature_data_dir, input_feat_file)
         output_feat_file = os.path.join(self.feature_data_dir, output_feat_file)
@@ -119,7 +119,7 @@ class Criteo(Dataset):
             if self.block_size is not None and line_no % self.block_size == 0:
                 fin.close()
                 fout.close()
-                print 'part', cur_part, 'finish'
+                print('part', cur_part, 'finish')
                 cur_part += 1
                 fin = open(input_feat_file + '.part_' + str(cur_part), 'w')
                 fout = open(output_feat_file + '.part_' + str(cur_part), 'w')
