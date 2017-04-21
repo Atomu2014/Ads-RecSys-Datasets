@@ -164,6 +164,13 @@ class Dataset:
             batch_size = max(int(1 / self.train_pos_ratio), int(1 / self.test_pos_ratio)) + 1
         if val_ratio is None:
             val_ratio = 0.0
+        if num_of_parts is None:
+            if gen_type == 'train' or gen_type == 'train':
+                if self.train_num_of_parts is not None:
+                    num_of_parts = self.train_num_of_parts
+            elif gen_type == 'test':
+                if self.test_num_of_parts is not None:
+                    num_of_parts = self.test_num_of_parts
 
         for hdf_in, hdf_out, ignore_finish in self._iterate_hdf_files_(gen_type, num_of_parts):
             number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]

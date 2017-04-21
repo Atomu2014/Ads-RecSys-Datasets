@@ -27,9 +27,10 @@ class Criteo(Dataset):
                   585, 147117, 19845, 14830, 6916, 18687, 4, 6646, 1272, 46, 141085, 64381,
                   63692, 11, 2156, 7806, 61, 5, 928, 15, 147387, 116331, 145634, 57186, 9307, 63, 34]
     feat_min = [sum(feat_sizes[:i]) for i in range(max_length)]
-    raw_data_dir = '../Criteo-8d/raw'
-    feature_data_dir = '../Criteo-8d/feature'
-    hdf_data_dir = '../Criteo-8d/hdf'
+    data_dir = os.path.dirname(os.path.dirname(__file__))
+    raw_data_dir = data_dir + '/Criteo-8d/raw'
+    feature_data_dir = data_dir + '/Criteo-8d/feature'
+    hdf_data_dir = data_dir + '/Criteo-8d/hdf'
 
     def __init__(self, initialized=True, dir_path='../Criteo-8d', max_length=None, num_features=None,
                  block_size=2000000):
