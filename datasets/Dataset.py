@@ -255,3 +255,6 @@ class Dataset:
         X_pos, y_pos = X[posidx], y[posidx]
         X_neg, y_neg = X[~posidx], y[~posidx]
         return X_pos, y_pos, X_neg, y_neg
+
+    def __str__(self):
+        return self.__class__.__name__
