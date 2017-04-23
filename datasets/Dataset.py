@@ -132,9 +132,9 @@ class Dataset:
         :param num_of_parts: 
         :return: input_hdf_file_name, output_hdf_file_name, finish_flag
         """
-        if gen_type == 'train' or gen_type == 'val':
+        if gen_type.lower() == 'train' or gen_type.lower() == 'valid':
             file_prefix = 'train'
-        elif gen_type == 'test':
+        elif gen_type.lower() == 'test':
             file_prefix = 'test'
         if num_of_parts is None:
             yield os.path.join(self.hdf_data_dir, file_prefix + '_input.h5'), \
@@ -165,20 +165,20 @@ class Dataset:
         if val_ratio is None:
             val_ratio = 0.0
         if num_of_parts is None:
-            if gen_type == 'train' or gen_type == 'train':
+            if gen_type.lower() == 'train' or gen_type.lower() == 'valid':
                 if self.train_num_of_parts is not None:
                     num_of_parts = self.train_num_of_parts
-            elif gen_type == 'test':
+            elif gen_type.lower() == 'test':
                 if self.test_num_of_parts is not None:
                     num_of_parts = self.test_num_of_parts
 
         for hdf_in, hdf_out, ignore_finish in self._iterate_hdf_files_(gen_type, num_of_parts):
             number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
 
-            if gen_type == 'train':
+            if gen_type.lower() == 'train':
                 start = int(number_of_lines * val_ratio)
                 stop = None
-            elif gen_type == 'val':
+            elif gen_type.lower() == 'val':
                 start = None
                 stop = int(number_of_lines * val_ratio)
             else:
