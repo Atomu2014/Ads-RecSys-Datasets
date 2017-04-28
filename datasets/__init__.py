@@ -1,5 +1,5 @@
-from Criteo import Criteo
-from iPinYou import iPinYou
+from .Criteo import Criteo
+from .iPinYou import iPinYou
 
 
 def as_dataset(data_name, **kwargs):
