@@ -144,7 +144,8 @@ class Dataset:
             parts = np.arange(num_of_parts)
             while True:
                 if shuffle_block:
-                    np.random.shuffle(parts)
+                    for i in range(int(shuffle_block)):
+                        np.random.shuffle(parts)
                 for p in parts:
                     yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
                           os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), False
