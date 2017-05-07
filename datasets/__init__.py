@@ -3,7 +3,8 @@ from .iPinYou import iPinYou
 
 
 def as_dataset(data_name, **kwargs):
-    if data_name.lower() == 'criteo':
+    data_name = data_name.lower()
+    if data_name == 'criteo':
         return Criteo(**kwargs)
-    elif data_name.lower() == 'ipinyou':
+    elif data_name == 'ipinyou':
         return iPinYou(**kwargs)

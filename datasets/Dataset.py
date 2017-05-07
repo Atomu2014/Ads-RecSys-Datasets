@@ -123,13 +123,14 @@ class Dataset:
         for i in range(len(self.feat_names)):
             print('%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i]))
 
-    def _iterate_hdf_files_(self, gen_type='train', num_of_parts=None):
+    def _iterate_hdf_files_(self, gen_type='train', num_of_parts=None, shuffle_block=False):
         """
         iterate among hdf files(blocks). when the whole data set is finished, the iterator restarts 
             from the beginning, thus the data stream will never stop
         :param gen_type: could be 'train', 'valid', or 'test'. when gen_type='train' or 'valid', 
             this file iterator will go through the train set
         :param num_of_parts: 
+        :param shuffle_block: shuffle block files at every round
         :return: input_hdf_file_name, output_hdf_file_name, finish_flag
         """
         if gen_type.lower() == 'train' or gen_type.lower() == 'valid':
@@ -140,14 +141,16 @@ class Dataset:
             yield os.path.join(self.hdf_data_dir, file_prefix + '_input.h5'), \
                   os.path.join(self.hdf_data_dir, file_prefix + '_output.h5'), True
         else:
-            part = 0
+            parts = np.arange(num_of_parts)
             while True:
-                yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(part) + '.h5'), \
-                      os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5'), False
-                part = (part + 1) % num_of_parts
+                if shuffle_block:
+                    np.random.shuffle(parts)
+                for p in parts:
+                    yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
+                          os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), False
 
     def batch_generator(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                        random_sample=False, split_fields=False):
+                        random_sample=False, shuffle_block=False, split_fields=False):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
@@ -155,6 +158,7 @@ class Dataset:
         :param num_of_parts: 
         :param val_ratio: fraction of valid set from train set
         :param random_sample: if True, will shuffle
+        :param shuffle_block: shuffle file blocks at every round
         :param split_fields: if True, returned values will be independently indexed, else using unified index
         :return: 
         """
@@ -172,7 +176,7 @@ class Dataset:
                 if self.test_num_of_parts is not None:
                     num_of_parts = self.test_num_of_parts
 
-        for hdf_in, hdf_out, ignore_finish in self._iterate_hdf_files_(gen_type, num_of_parts):
+        for hdf_in, hdf_out, ignore_finish in self._iterate_hdf_files_(gen_type, num_of_parts, shuffle_block):
             number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
 
             if gen_type.lower() == 'train':
