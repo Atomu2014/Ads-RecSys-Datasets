@@ -234,6 +234,7 @@ class Dataset:
             X_all = []
             y_all = []
             for hdf_in, hdf_out, finish_flag in self._iterate_hdf_files_(gen_type, num_of_parts, False):
+                print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
                 X_block = pd.read_hdf(hdf_in).as_matrix()
                 y_block = pd.read_hdf(hdf_out).as_matrix()
                 X_all.append(X_block)
