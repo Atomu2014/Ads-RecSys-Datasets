@@ -26,10 +26,10 @@ class iPinYou(Dataset):
     feat_max = [7, 32, 704997, 705033, 705404, 705410, 756731, 937426, 937448, 937463, 937475, 937480, 937612, 937622,
                 937663, 937669]
     feat_sizes = [feat_max[i] - feat_min[i] + 1 for i in range(max_length)]
-    data_dir = os.path.dirname(os.path.dirname(__file__))
-    raw_data_dir = data_dir + '/iPinYou-all/raw'
-    feature_data_dir = data_dir + '/iPinYou-all/feature'
-    hdf_data_dir = data_dir + '/iPinYou-all/hdf'
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'iPinYou-all')
+    raw_data_dir = os.path.join(data_dir, 'raw')
+    feature_data_dir = os.path.join(data_dir, '/feature')
+    hdf_data_dir = os.path.join(data_dir, 'hdf')
 
     def __init__(self, initialized=True, dir_path='../iPinYou-all', max_length=None, num_features=None,
                  block_size=2000000):

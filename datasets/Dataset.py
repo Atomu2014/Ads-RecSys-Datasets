@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 
 import numpy as np
@@ -50,6 +51,13 @@ class Dataset:
     raw_data_dir = None
     feature_data_dir = None
     hdf_data_dir = None
+
+    X_train = None
+    y_train = None
+    X_valid = None
+    y_valid = None
+    X_test = None
+    y_test = None
 
     def raw_to_feature(self, **kwargs):
         """
@@ -133,9 +141,10 @@ class Dataset:
         :param shuffle_block: shuffle block files at every round
         :return: input_hdf_file_name, output_hdf_file_name, finish_flag
         """
-        if gen_type.lower() == 'train' or gen_type.lower() == 'valid':
+        gen_type = gen_type.lower()
+        if gen_type == 'train' or gen_type == 'valid':
             file_prefix = 'train'
-        elif gen_type.lower() == 'test':
+        elif gen_type == 'test':
             file_prefix = 'test'
         if num_of_parts is None:
             yield os.path.join(self.hdf_data_dir, file_prefix + '_input.h5'), \
@@ -146,12 +155,13 @@ class Dataset:
                 if shuffle_block:
                     for i in range(int(shuffle_block)):
                         np.random.shuffle(parts)
-                for p in parts:
+                for i, p in enumerate(parts):
                     yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
-                          os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), False
+                          os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), i + 1 == len(
+                        parts)
 
     def batch_generator(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                        random_sample=False, shuffle_block=False, split_fields=False):
+                        random_sample=False, shuffle_block=False, split_fields=False, on_disk=True):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
@@ -163,34 +173,101 @@ class Dataset:
         :param split_fields: if True, returned values will be independently indexed, else using unified index
         :return: 
         """
-        if pos_ratio is None:
-            pos_ratio = self.train_pos_ratio
+        # if pos_ratio is None:
+        #     pos_ratio = self.train_pos_ratio
         if batch_size is None:
             batch_size = max(int(1 / self.train_pos_ratio), int(1 / self.test_pos_ratio)) + 1
         if val_ratio is None:
             val_ratio = 0.0
+        gen_type = gen_type.lower()
         if num_of_parts is None:
-            if gen_type.lower() == 'train' or gen_type.lower() == 'valid':
+            if gen_type == 'train' or gen_type == 'valid':
                 if self.train_num_of_parts is not None:
                     num_of_parts = self.train_num_of_parts
-            elif gen_type.lower() == 'test':
+            elif gen_type == 'test':
                 if self.test_num_of_parts is not None:
                     num_of_parts = self.test_num_of_parts
 
-        for hdf_in, hdf_out, ignore_finish in self._iterate_hdf_files_(gen_type, num_of_parts, shuffle_block):
-            number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
+        if on_disk:
+            print('on disk...')
+            for hdf_in, hdf_out, _ in self._iterate_hdf_files_(gen_type, num_of_parts, shuffle_block):
+                number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
 
-            if gen_type.lower() == 'train':
-                start = int(number_of_lines * val_ratio)
-                stop = None
-            elif gen_type.lower() == 'val':
-                start = None
-                stop = int(number_of_lines * val_ratio)
-            else:
-                start = stop = None
-            X_all = pd.read_hdf(hdf_in, start=start, stop=stop).as_matrix()
-            y_all = pd.read_hdf(hdf_out, start=start, stop=stop).as_matrix()
+                if gen_type == 'train':
+                    start = int(number_of_lines * val_ratio)
+                    stop = None
+                elif gen_type == 'val':
+                    start = None
+                    stop = int(number_of_lines * val_ratio)
+                else:
+                    start = stop = None
+                X_all = pd.read_hdf(hdf_in, start=start, stop=stop).as_matrix()
+                y_all = pd.read_hdf(hdf_out, start=start, stop=stop).as_matrix()
 
+                X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
+                number_of_pos = X_pos.shape[0]
+                number_of_neg = X_neg.shape[0]
+                if pos_ratio is None:
+                    pos_ratio = 1.0 * number_of_pos / (number_of_pos + number_of_neg)
+                if number_of_pos <= 0 or number_of_neg <= 0:
+                    raise Exception('Invalid partition')
+                pos_batchsize = int(batch_size * pos_ratio)
+                neg_batchsize = batch_size - pos_batchsize
+                if pos_batchsize <= 0 or neg_batchsize <= 0:
+                    raise Exception('Invalid positive ratio.')
+                pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
+                neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
+                pos_finished = False
+                neg_finished = False
+                while not pos_finished and not neg_finished:
+                    pos_X, pos_y, pos_finished = pos_gen.next()
+                    neg_X, neg_y, neg_finished = neg_gen.next()
+                    X = np.append(pos_X, neg_X, axis=0)
+                    y = np.append(pos_y, neg_y, axis=0)
+                    if split_fields:
+                        X = np.split(X, self.max_length, axis=1)
+                        for i in range(self.max_length):
+                            X[i] -= self.feat_min[i]
+                    yield X, y
+        else:
+            print('in mem...')
+            X_all = []
+            y_all = []
+            for hdf_in, hdf_out, finish_flag in self._iterate_hdf_files_(gen_type, num_of_parts, False):
+                X_block = pd.read_hdf(hdf_in).as_matrix()
+                y_block = pd.read_hdf(hdf_out).as_matrix()
+                X_all.append(X_block)
+                y_all.append(y_block)
+                if finish_flag:
+                    break
+            X_all = np.vstack(X_all)
+            y_all = np.vstack(y_all)
+            if random_sample:
+                idx = np.arange(X_all.shape[0])
+                for i in range(int(random_sample)):
+                    np.random.shuffle(idx)
+                X_all = X_all[idx]
+                y_all = y_all[idx]
+            if gen_type == 'train' or gen_type == 'valid':
+                sep = int(X_all.shape[0] * val_ratio)
+                self.X_valid = X_all[:sep]
+                self.y_valid = y_all[:sep]
+                self.X_train = X_all[sep:]
+                self.y_train = y_all[sep:]
+                print('all train/valid data loaded')
+            elif gen_type == 'test':
+                self.X_test = X_all
+                self.y_test = y_all
+                print('all test data loaded')
+            if gen_type == 'train':
+                X_all = self.X_train
+                y_all = self.y_train
+            elif gen_type == 'valid':
+                X_all = self.X_valid
+                y_all = self.y_valid
+            elif gen_type == 'test':
+                X_all = self.X_test
+                y_all = self.y_test
             X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
             number_of_pos = X_pos.shape[0]
             number_of_neg = X_neg.shape[0]
@@ -204,11 +281,9 @@ class Dataset:
                 raise Exception('Invalid positive ratio.')
             pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
             neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
-            pos_finished = False
-            neg_finished = False
-            while ignore_finish or (not pos_finished and not neg_finished):
-                pos_X, pos_y, pos_finished = pos_gen.next()
-                neg_X, neg_y, neg_finished = neg_gen.next()
+            while True:
+                pos_X, pos_y, _ = pos_gen.next()
+                neg_X, neg_y, _ = neg_gen.next()
                 X = np.append(pos_X, neg_X, axis=0)
                 y = np.append(pos_y, neg_y, axis=0)
                 if split_fields:
