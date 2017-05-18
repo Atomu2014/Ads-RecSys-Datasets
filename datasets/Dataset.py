@@ -104,7 +104,7 @@ class Dataset:
         num_of_neg = 0
         for part in range(num_of_parts):
             _y = pd.read_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5'))
-            part_pos_num = _y.loc[_y.ix[:, 0] == 1].shape[0]
+            part_pos_num = _y.loc[_y.iloc[:, 0] == 1].shape[0]
             part_neg_num = _y.shape[0] - part_pos_num
             size += _y.shape[0]
             num_of_pos += part_pos_num
@@ -160,8 +160,48 @@ class Dataset:
                           os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), i + 1 == len(
                         parts)
 
+    def load_data(self, gen_type='train', num_of_parts=None, random_sample=False, val_ratio=None):
+        if val_ratio is None:
+            val_ratio = 0.0
+        if num_of_parts is None:
+            if gen_type == 'train' or gen_type == 'valid':
+                if self.train_num_of_parts is not None:
+                    num_of_parts = self.train_num_of_parts
+            elif gen_type == 'test':
+                if self.test_num_of_parts is not None:
+                    num_of_parts = self.test_num_of_parts
+        X_all = []
+        y_all = []
+        for hdf_in, hdf_out, finish_flag in self._iterate_hdf_files_(gen_type, num_of_parts, False):
+            print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
+            X_block = pd.read_hdf(hdf_in).as_matrix()
+            y_block = pd.read_hdf(hdf_out).as_matrix()
+            X_all.append(X_block)
+            y_all.append(y_block)
+            if finish_flag:
+                break
+        X_all = np.vstack(X_all)
+        y_all = np.vstack(y_all)
+        if random_sample:
+            idx = np.arange(X_all.shape[0])
+            for i in range(int(random_sample)):
+                np.random.shuffle(idx)
+            X_all = X_all[idx]
+            y_all = y_all[idx]
+        if gen_type == 'train' or gen_type == 'valid':
+            sep = int(X_all.shape[0] * val_ratio)
+            self.X_valid = X_all[:sep]
+            self.y_valid = y_all[:sep]
+            self.X_train = X_all[sep:]
+            self.y_train = y_all[sep:]
+            print('all train/valid data loaded')
+        elif gen_type == 'test':
+            self.X_test = X_all
+            self.y_test = y_all
+            print('all test data loaded')
+
     def batch_generator(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                        random_sample=False, shuffle_block=False, split_fields=False, on_disk=True):
+                        random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=True):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
@@ -171,10 +211,10 @@ class Dataset:
         :param random_sample: if True, will shuffle
         :param shuffle_block: shuffle file blocks at every round
         :param split_fields: if True, returned values will be independently indexed, else using unified index
+        :param on_disk: if true iterate on disk, random_sample in block, if false iterate in mem, random_sample on all data
+        :param split_pos_neg: if true every block will be split into pos and neg, every batch is a mixture of the two
         :return: 
         """
-        # if pos_ratio is None:
-        #     pos_ratio = self.train_pos_ratio
         if batch_size is None:
             batch_size = max(int(1 / self.train_pos_ratio), int(1 / self.test_pos_ratio)) + 1
         if val_ratio is None:
@@ -204,6 +244,56 @@ class Dataset:
                 X_all = pd.read_hdf(hdf_in, start=start, stop=stop).as_matrix()
                 y_all = pd.read_hdf(hdf_out, start=start, stop=stop).as_matrix()
 
+                if split_pos_neg:
+                    X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
+                    number_of_pos = X_pos.shape[0]
+                    number_of_neg = X_neg.shape[0]
+                    if pos_ratio is None:
+                        pos_ratio = 1.0 * number_of_pos / (number_of_pos + number_of_neg)
+                    if number_of_pos <= 0 or number_of_neg <= 0:
+                        raise Exception('Invalid partition')
+                    pos_batchsize = int(batch_size * pos_ratio)
+                    neg_batchsize = batch_size - pos_batchsize
+                    if pos_batchsize <= 0 or neg_batchsize <= 0:
+                        raise Exception('Invalid positive ratio.')
+                    pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
+                    neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
+                    pos_finished = False
+                    neg_finished = False
+                    while not pos_finished and not neg_finished:
+                        pos_X, pos_y, pos_finished = pos_gen.next()
+                        neg_X, neg_y, neg_finished = neg_gen.next()
+                        X = np.append(pos_X, neg_X, axis=0)
+                        y = np.append(pos_y, neg_y, axis=0)
+                        if split_fields:
+                            X = np.split(X, self.max_length, axis=1)
+                            for i in range(self.max_length):
+                                X[i] -= self.feat_min[i]
+                        yield X, y
+                else:
+                    gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
+                    finished = False
+                    while not finished:
+                        X, y, finished = gen.next()
+                        if split_fields:
+                            X = np.split(X, self.max_length, axis=1)
+                            for i in range(self.max_length):
+                                X[i] -= self.feat_min[i]
+                        yield X, y
+        else:
+            print('in mem...')
+            self.load_data(gen_type, num_of_parts, random_sample, val_ratio)
+            if gen_type == 'train':
+                X_all = self.X_train
+                y_all = self.y_train
+            elif gen_type == 'valid':
+                X_all = self.X_valid
+                y_all = self.y_valid
+            elif gen_type == 'test':
+                X_all = self.X_test
+                y_all = self.y_test
+
+            if split_pos_neg:
                 X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
                 number_of_pos = X_pos.shape[0]
                 number_of_neg = X_neg.shape[0]
@@ -217,11 +307,9 @@ class Dataset:
                     raise Exception('Invalid positive ratio.')
                 pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
                 neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
-                pos_finished = False
-                neg_finished = False
-                while not pos_finished and not neg_finished:
-                    pos_X, pos_y, pos_finished = pos_gen.next()
-                    neg_X, neg_y, neg_finished = neg_gen.next()
+                while True:
+                    pos_X, pos_y, _ = pos_gen.next()
+                    neg_X, neg_y, _ = neg_gen.next()
                     X = np.append(pos_X, neg_X, axis=0)
                     y = np.append(pos_y, neg_y, axis=0)
                     if split_fields:
@@ -229,69 +317,15 @@ class Dataset:
                         for i in range(self.max_length):
                             X[i] -= self.feat_min[i]
                     yield X, y
-        else:
-            print('in mem...')
-            X_all = []
-            y_all = []
-            for hdf_in, hdf_out, finish_flag in self._iterate_hdf_files_(gen_type, num_of_parts, False):
-                print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
-                X_block = pd.read_hdf(hdf_in).as_matrix()
-                y_block = pd.read_hdf(hdf_out).as_matrix()
-                X_all.append(X_block)
-                y_all.append(y_block)
-                if finish_flag:
-                    break
-            X_all = np.vstack(X_all)
-            y_all = np.vstack(y_all)
-            if random_sample:
-                idx = np.arange(X_all.shape[0])
-                for i in range(int(random_sample)):
-                    np.random.shuffle(idx)
-                X_all = X_all[idx]
-                y_all = y_all[idx]
-            if gen_type == 'train' or gen_type == 'valid':
-                sep = int(X_all.shape[0] * val_ratio)
-                self.X_valid = X_all[:sep]
-                self.y_valid = y_all[:sep]
-                self.X_train = X_all[sep:]
-                self.y_train = y_all[sep:]
-                print('all train/valid data loaded')
-            elif gen_type == 'test':
-                self.X_test = X_all
-                self.y_test = y_all
-                print('all test data loaded')
-            if gen_type == 'train':
-                X_all = self.X_train
-                y_all = self.y_train
-            elif gen_type == 'valid':
-                X_all = self.X_valid
-                y_all = self.y_valid
-            elif gen_type == 'test':
-                X_all = self.X_test
-                y_all = self.y_test
-            X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
-            number_of_pos = X_pos.shape[0]
-            number_of_neg = X_neg.shape[0]
-            if pos_ratio is None:
-                pos_ratio = 1.0 * number_of_pos / (number_of_pos + number_of_neg)
-            if number_of_pos <= 0 or number_of_neg <= 0:
-                raise Exception('Invalid partition')
-            pos_batchsize = int(batch_size * pos_ratio)
-            neg_batchsize = batch_size - pos_batchsize
-            if pos_batchsize <= 0 or neg_batchsize <= 0:
-                raise Exception('Invalid positive ratio.')
-            pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
-            neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
-            while True:
-                pos_X, pos_y, _ = pos_gen.next()
-                neg_X, neg_y, _ = neg_gen.next()
-                X = np.append(pos_X, neg_X, axis=0)
-                y = np.append(pos_y, neg_y, axis=0)
-                if split_fields:
-                    X = np.split(X, self.max_length, axis=1)
-                    for i in range(self.max_length):
-                        X[i] -= self.feat_min[i]
-                yield X, y
+            else:
+                gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
+                while True:
+                    X, y, _ = gen.next()
+                    if split_fields:
+                        X = np.split(X, self.max_length, axis=1)
+                        for i in range(self.max_length):
+                            X[i] -= self.feat_min[i]
+                    yield X, y
 
     @staticmethod
     def generator(X, y, batch_size, shuffle=True):
