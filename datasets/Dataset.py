@@ -5,6 +5,20 @@ import numpy as np
 import pandas as pd
 
 
+class DatasetHelper:
+    def __init__(self, dataset, kwargs):
+        self.dataset = dataset
+        self.kwargs = kwargs
+
+    def __iter__(self):
+        for x in self.dataset.__iter__(**self.kwargs):
+            yield x
+
+    @property
+    def batch_size(self):
+        return self.kwargs['batch_size']
+
+
 class Dataset:
     """
     block_size, train_num_of_parts, test_num_of_parts:
@@ -131,7 +145,7 @@ class Dataset:
         for i in range(len(self.feat_names)):
             print('%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i]))
 
-    def _iterate_hdf_files_(self, gen_type='train', num_of_parts=None, shuffle_block=False):
+    def _files_iter_(self, gen_type='train', num_of_parts=None, shuffle_block=False):
         """
         iterate among hdf files(blocks). when the whole data set is finished, the iterator restarts 
             from the beginning, thus the data stream will never stop
@@ -146,19 +160,22 @@ class Dataset:
             file_prefix = 'train'
         elif gen_type == 'test':
             file_prefix = 'test'
-        if num_of_parts is None:
+        if num_of_parts == 0:
             yield os.path.join(self.hdf_data_dir, file_prefix + '_input.h5'), \
-                  os.path.join(self.hdf_data_dir, file_prefix + '_output.h5'), True
+                  os.path.join(self.hdf_data_dir, file_prefix + '_output.h5'),
         else:
+            if num_of_parts is None:
+                if gen_type == 'train' or gen_type == 'valid':
+                    num_of_parts = self.train_num_of_parts
+                elif gen_type == 'test':
+                    num_of_parts = self.test_num_of_parts
             parts = np.arange(num_of_parts)
-            while True:
-                if shuffle_block:
-                    for i in range(int(shuffle_block)):
-                        np.random.shuffle(parts)
-                for i, p in enumerate(parts):
-                    yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
-                          os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'), i + 1 == len(
-                        parts)
+            if shuffle_block:
+                for i in range(int(shuffle_block)):
+                    np.random.shuffle(parts)
+            for i, p in enumerate(parts):
+                yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
+                      os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'),
 
     def load_data(self, gen_type='train', num_of_parts=None, random_sample=False, val_ratio=None):
         if val_ratio is None:
@@ -172,14 +189,12 @@ class Dataset:
                     num_of_parts = self.test_num_of_parts
         X_all = []
         y_all = []
-        for hdf_in, hdf_out, finish_flag in self._iterate_hdf_files_(gen_type, num_of_parts, False):
+        for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
             X_block = pd.read_hdf(hdf_in).as_matrix()
             y_block = pd.read_hdf(hdf_out).as_matrix()
             X_all.append(X_block)
             y_all.append(y_block)
-            if finish_flag:
-                break
         X_all = np.vstack(X_all)
         y_all = np.vstack(y_all)
         if random_sample:
@@ -200,8 +215,12 @@ class Dataset:
             self.y_test = y_all
             print('all test data loaded')
 
-    def batch_generator(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                        random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=True):
+    def batch_generator(self, kwargs):
+        return DatasetHelper(self, kwargs)
+
+    def __iter__(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
+                 random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=True,
+                 squeeze_output=False):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
@@ -227,16 +246,15 @@ class Dataset:
             elif gen_type == 'test':
                 if self.test_num_of_parts is not None:
                     num_of_parts = self.test_num_of_parts
-
         if on_disk:
             print('on disk...')
-            for hdf_in, hdf_out, _ in self._iterate_hdf_files_(gen_type, num_of_parts, shuffle_block):
+            for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, shuffle_block):
                 number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
 
                 if gen_type == 'train':
                     start = int(number_of_lines * val_ratio)
                     stop = None
-                elif gen_type == 'val':
+                elif gen_type == 'valid':
                     start = None
                     stop = int(number_of_lines * val_ratio)
                 else:
@@ -258,27 +276,31 @@ class Dataset:
                         raise Exception('Invalid positive ratio.')
                     pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
                     neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
-                    pos_finished = False
-                    neg_finished = False
-                    while not pos_finished and not neg_finished:
-                        pos_X, pos_y, pos_finished = pos_gen.next()
-                        neg_X, neg_y, neg_finished = neg_gen.next()
-                        X = np.append(pos_X, neg_X, axis=0)
-                        y = np.append(pos_y, neg_y, axis=0)
-                        if split_fields:
-                            X = np.split(X, self.max_length, axis=1)
-                            for i in range(self.max_length):
-                                X[i] -= self.feat_min[i]
-                        yield X, y
+                    while True:
+                        try:
+                            pos_X, pos_y, pos_finished = pos_gen.next()
+                            neg_X, neg_y, neg_finished = neg_gen.next()
+                            X = np.append(pos_X, neg_X, axis=0)
+                            y = np.append(pos_y, neg_y, axis=0)
+                            if split_fields:
+                                X = np.split(X, self.max_length, axis=1)
+                                for i in range(self.max_length):
+                                    X[i] -= self.feat_min[i]
+                            if squeeze_output:
+                                y = y.squeeze()
+                            yield X, y
+                        except StopIteration, e:
+                            print('finish block', hdf_in)
+                            break
                 else:
                     gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
-                    finished = False
-                    while not finished:
-                        X, y, finished = gen.next()
+                    for X, y in gen:
                         if split_fields:
                             X = np.split(X, self.max_length, axis=1)
                             for i in range(self.max_length):
                                 X[i] -= self.feat_min[i]
+                        if squeeze_output:
+                            y = y.squeeze()
                         yield X, y
         else:
             print('in mem...')
@@ -308,23 +330,29 @@ class Dataset:
                 pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
                 neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
                 while True:
-                    pos_X, pos_y, _ = pos_gen.next()
-                    neg_X, neg_y, _ = neg_gen.next()
-                    X = np.append(pos_X, neg_X, axis=0)
-                    y = np.append(pos_y, neg_y, axis=0)
-                    if split_fields:
-                        X = np.split(X, self.max_length, axis=1)
-                        for i in range(self.max_length):
-                            X[i] -= self.feat_min[i]
-                    yield X, y
+                    try:
+                        pos_X, pos_y, pos_finished = pos_gen.next()
+                        neg_X, neg_y, neg_finished = neg_gen.next()
+                        X = np.append(pos_X, neg_X, axis=0)
+                        y = np.append(pos_y, neg_y, axis=0)
+                        if split_fields:
+                            X = np.split(X, self.max_length, axis=1)
+                            for i in range(self.max_length):
+                                X[i] -= self.feat_min[i]
+                        if squeeze_output:
+                            y = y.squeeze()
+                        yield X, y
+                    except StopIteration, e:
+                        break
             else:
                 gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
-                while True:
-                    X, y, _ = gen.next()
+                for X, y in gen:
                     if split_fields:
                         X = np.split(X, self.max_length, axis=1)
                         for i in range(self.max_length):
                             X[i] -= self.feat_min[i]
+                    if squeeze_output:
+                        y = y.squeeze()
                     yield X, y
 
     @staticmethod
@@ -337,26 +365,21 @@ class Dataset:
         :param shuffle: 
         :return: 
         """
-        number_of_batches = np.ceil(X.shape[0] / batch_size)
-        counter = 0
+        num_of_batches = int(np.ceil(X.shape[0] / batch_size))
         finished = False
         sample_index = np.arange(X.shape[0])
         if shuffle:
             for i in range(int(shuffle)):
                 np.random.shuffle(sample_index)
         assert X.shape[0] > 0
-        while True:
-            batch_index = sample_index[batch_size * counter:batch_size * (counter + 1)]
-            while batch_index.size != batch_size:
+        for i in range(num_of_batches):
+            batch_index = sample_index[batch_size * i: batch_size * (i + 1)]
+            if batch_index.size < batch_size:
                 remain = batch_size - batch_index.size
                 batch_index = np.append(batch_index, sample_index[:remain])
             X_batch = X[batch_index]
             y_batch = y[batch_index]
-            counter += 1
             yield X_batch, y_batch, finished
-            if counter == number_of_batches:
-                counter = 0
-                finished = True
 
     @staticmethod
     def split_pos_neg(X, y):

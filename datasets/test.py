@@ -66,4 +66,49 @@ def test_dataset(dataset, train_gen=False, val_gen=False, test_gen=False,
 
 
 # test_dataset(Criteo, True, True, True, random_sample=True, split_fields=False, on_disk=False)
-test_dataset(iPinYou, True, True, True, random_sample=True, split_fields=False, on_disk=False)
+# test_dataset(iPinYou, True, True, True, random_sample=True, split_fields=False, on_disk=False)
+
+# data = iPinYou()
+# gen = data.batch_generator(kwargs={'gen_type': 'train', 'batch_size': 10000, 'val_ratio': 0.01})
+# i = 0
+# for d in gen:
+#     i += 1
+#     if i % 100 == 0:
+#         print(i)
+#     if i == 200:
+#         break
+# # gen = gen.reset()
+# i = 0
+# for d in gen:
+#     i += 1
+#     if i % 100 == 0:
+#         print(i)
+
+
+class a:
+    def __init__(self, b):
+        self.b = b
+    # def reset(self):
+    #     return self.b.run()
+    def __iter__(self):
+        for i in self.b.__iter__():
+            yield i
+        # yield self.b.__iter__()
+
+class b:
+    def __init__(self, n):
+        self.n = n
+    def __iter__(self):
+        for i in range(self.n):
+            yield i
+    def run(self):
+        return a(self)
+
+b_gen = b(10).run()
+b_iter = b_gen.__iter__()
+for i in b_iter:
+    print(i)
+# b_gen = b_gen.reset()
+b_iter = b_gen.__iter__()
+for i in b_iter:
+    print(i)
