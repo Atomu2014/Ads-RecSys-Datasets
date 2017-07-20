@@ -29,7 +29,7 @@ class Criteo(Dataset):
     feat_min = [sum(feat_sizes[:i]) for i in range(max_length)]
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'Criteo-8d')
     raw_data_dir = os.path.join(data_dir, 'raw')
-    feature_data_dir = os.path.join(data_dir, '/feature')
+    feature_data_dir = os.path.join(data_dir, 'feature')
     hdf_data_dir = os.path.join(data_dir, 'hdf')
 
     def __init__(self, initialized=True, dir_path='../Criteo-8d', max_length=None, num_features=None,
