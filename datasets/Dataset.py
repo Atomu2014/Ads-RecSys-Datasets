@@ -117,7 +117,7 @@ class Dataset:
         num_of_pos = 0
         num_of_neg = 0
         for part in range(num_of_parts):
-            _y = pd.read_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5'))
+            _y = pd.read_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5'), mode='r')
             part_pos_num = _y.loc[_y.iloc[:, 0] == 1].shape[0]
             part_neg_num = _y.shape[0] - part_pos_num
             size += _y.shape[0]
@@ -191,16 +191,15 @@ class Dataset:
         y_all = []
         for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
-            X_block = pd.read_hdf(hdf_in).as_matrix()
-            y_block = pd.read_hdf(hdf_out).as_matrix()
+            X_block = pd.read_hdf(hdf_in, mode='r').as_matrix()
+            y_block = pd.read_hdf(hdf_out, mode='r').as_matrix()
             X_all.append(X_block)
             y_all.append(y_block)
         X_all = np.vstack(X_all)
         y_all = np.vstack(y_all)
         if random_sample:
             idx = np.arange(X_all.shape[0])
-            for i in range(int(random_sample)):
-                np.random.shuffle(idx)
+            np.random.shuffle(idx)
             X_all = X_all[idx]
             y_all = y_all[idx]
         if gen_type == 'train' or gen_type == 'valid':
@@ -249,7 +248,7 @@ class Dataset:
         if on_disk:
             print('on disk...')
             for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, shuffle_block):
-                number_of_lines = pd.HDFStore(hdf_in).get_storer('fixed').shape[0]
+                number_of_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
 
                 if gen_type == 'train':
                     start = int(number_of_lines * val_ratio)
@@ -259,8 +258,8 @@ class Dataset:
                     stop = int(number_of_lines * val_ratio)
                 else:
                     start = stop = None
-                X_all = pd.read_hdf(hdf_in, start=start, stop=stop).as_matrix()
-                y_all = pd.read_hdf(hdf_out, start=start, stop=stop).as_matrix()
+                X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+                y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
 
                 if split_pos_neg:
                     X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
