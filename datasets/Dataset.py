@@ -277,8 +277,8 @@ class Dataset:
                     neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
                     while True:
                         try:
-                            pos_X, pos_y, pos_finished = pos_gen.next()
-                            neg_X, neg_y, neg_finished = neg_gen.next()
+                            pos_X, pos_y = pos_gen.next()
+                            neg_X, neg_y = neg_gen.next()
                             X = np.append(pos_X, neg_X, axis=0)
                             y = np.append(pos_y, neg_y, axis=0)
                             if split_fields:
@@ -330,8 +330,8 @@ class Dataset:
                 neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
                 while True:
                     try:
-                        pos_X, pos_y, pos_finished = pos_gen.next()
-                        neg_X, neg_y, neg_finished = neg_gen.next()
+                        pos_X, pos_y = pos_gen.next()
+                        neg_X, neg_y = neg_gen.next()
                         X = np.append(pos_X, neg_X, axis=0)
                         y = np.append(pos_y, neg_y, axis=0)
                         if split_fields:
@@ -365,7 +365,6 @@ class Dataset:
         :return: 
         """
         num_of_batches = int(np.ceil(X.shape[0] / batch_size))
-        finished = False
         sample_index = np.arange(X.shape[0])
         if shuffle:
             for i in range(int(shuffle)):
@@ -373,12 +372,9 @@ class Dataset:
         assert X.shape[0] > 0
         for i in range(num_of_batches):
             batch_index = sample_index[batch_size * i: batch_size * (i + 1)]
-            if batch_index.size < batch_size:
-                remain = batch_size - batch_index.size
-                batch_index = np.append(batch_index, sample_index[:remain])
             X_batch = X[batch_index]
             y_batch = y[batch_index]
-            yield X_batch, y_batch, finished
+            yield X_batch, y_batch
 
     @staticmethod
     def split_pos_neg(X, y):
