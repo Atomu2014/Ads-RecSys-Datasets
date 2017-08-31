@@ -32,12 +32,10 @@ class Criteo(Dataset):
     feature_data_dir = os.path.join(data_dir, 'feature')
     hdf_data_dir = os.path.join(data_dir, 'hdf')
 
-    def __init__(self, initialized=True, dir_path='../Criteo-8d', max_length=None, num_features=None,
-                 block_size=2000000):
+    def __init__(self, initialized=True, max_length=None, num_features=None, block_size=2000000):
         """
         collect meta information, and produce hdf files if not exists
         :param initialized: write feature and hdf files if True
-        :param dir_path: 
         :param max_length: 
         :param num_features: 
         :param block_size: 
@@ -45,9 +43,6 @@ class Criteo(Dataset):
         self.initialized = initialized
         if not self.initialized:
             print('Got raw Criteo 8-day logs, initializing data set...')
-            self.raw_data_dir = os.path.join(dir_path, 'raw')
-            self.feature_data_dir = os.path.join(dir_path, 'feature')
-            self.hdf_data_dir = os.path.join(dir_path, 'hdf')
             self.max_length = max_length
             self.num_features = num_features
             self.block_size = block_size

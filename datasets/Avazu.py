@@ -29,13 +29,10 @@ class Avazu(Dataset):
     feature_data_dir = os.path.join(data_dir, 'feature')
     hdf_data_dir = os.path.join(data_dir, 'hdf')
 
-    def __init__(self, initialized=True, dir_path='../Avazu', block_size=2000000):
+    def __init__(self, initialized=True, block_size=2000000):
         self.initialized = initialized
         if not self.initialized:
             print('Got raw Avazu data, initializing...')
-            self.raw_data_dir = os.path.join(dir_path, 'raw')
-            self.feature_data_dir = os.path.join(dir_path, 'feature')
-            self.hdf_data_dir = os.path.join(dir_path, 'hdf')
             self.block_size = block_size
             print('max length = %d, # feature = %d' % (self.max_length, self.num_features))
             self.train_num_of_parts = self.raw_to_feature(raw_file='avazu.tr.svm',
