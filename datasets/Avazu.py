@@ -54,12 +54,12 @@ class Avazu(Dataset):
                                 input_columns=self.feat_names,
                                 output_columns=['click'])
 
-            print('Got hdf Avazu data set, getting metadata...')
-            self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \
-                self.bin_count(self.hdf_data_dir, 'train', self.train_num_of_parts)
-            self.test_size, self.test_pos_samples, self.test_neg_samples, self.test_pos_ratio = \
-                self.bin_count(self.hdf_data_dir, 'test', self.test_num_of_parts)
-            print('Initialization finished!')
+        print('Got hdf Avazu data set, getting metadata...')
+        self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \
+            self.bin_count(self.hdf_data_dir, 'train', self.train_num_of_parts)
+        self.test_size, self.test_pos_samples, self.test_neg_samples, self.test_pos_ratio = \
+            self.bin_count(self.hdf_data_dir, 'test', self.test_num_of_parts)
+        print('Initialization finished!')
 
     def raw_to_feature(self, raw_file, input_feat_file, output_feat_file):
         print('Transferring raw', raw_file, 'data into feature', raw_file, 'data...')
