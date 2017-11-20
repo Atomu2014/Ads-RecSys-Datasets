@@ -81,8 +81,7 @@ class Dataset:
         pass
 
     @staticmethod
-    def feature_to_hdf(num_of_parts, file_prefix, feature_data_dir, hdf_data_dir, input_columns,
-                       output_columns):
+    def feature_to_hdf(num_of_parts, file_prefix, feature_data_dir, hdf_data_dir):
         """
         convert lib-svm feature files into hdf5 files (tables). using static method is for consistence 
             with multi-processing version, which can not be packed into a class
@@ -90,16 +89,18 @@ class Dataset:
         :param file_prefix: a prefix is suggested to identify train/test/valid/..., e.g. file_prefix='train'
         :param feature_data_dir: 
         :param hdf_data_dir: 
-        :param input_columns: to name the columns of inputs, e.g. input_columns=['city', 'IP', ...]
-        :param output_columns: to name the columns of output(s), e.g. output_columns=['click']
         :return: 
         """
         print('Transferring feature', file_prefix, 'data into hdf data and save hdf', file_prefix, 'data...')
         for idx in range(num_of_parts):
             _X = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_input.txt.part_' + str(idx)),
-                             names=input_columns, dtype=np.int32)
+                             dtype=np.int32, delimiter=' ', header=None)
             _y = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_output.txt.part_' + str(idx)),
-                             names=output_columns, dtype=np.int32)
+                             dtype=np.int32, delimiter=' ', header=None)
+            # _X = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_part_' + str(idx) + '.input'),
+            #                  dtype=np.int32, delimiter=' ', header=None)
+            # _y = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_part_' + str(idx) + '.output'),
+            #                  dtype=np.int32, delimiter=' ', header=None)
             _X.to_hdf(os.path.join(hdf_data_dir, file_prefix + '_input_part_' + str(idx) + '.h5'), 'fixed')
             _y.to_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(idx) + '.h5'), 'fixed')
             print('part:', idx, _X.shape, _y.shape)
@@ -132,14 +133,14 @@ class Dataset:
         :return: 
         """
         print(self.__class__.__name__, 'data set summary:')
-        print('train set: ', self.train_size)
-        print('\tpositive samples: ', self.train_pos_samples)
-        print('\tnegative samples: ', self.train_neg_samples)
-        print('\tpositive ratio: ', self.train_pos_ratio)
+        print('train set:', self.train_size)
+        print('\tpositive samples:', self.train_pos_samples)
+        print('\tnegative samples:', self.train_neg_samples)
+        print('\tpositive ratio:', self.train_pos_ratio)
         print('test size:', self.test_size)
-        print('\tpositive samples: ', self.test_pos_samples)
-        print('\tnegative samples: ', self.test_neg_samples)
-        print('\tpositive ratio: ', self.test_pos_ratio)
+        print('\tpositive samples:', self.test_pos_samples)
+        print('\tnegative samples:', self.test_neg_samples)
+        print('\tpositive ratio:', self.test_pos_ratio)
         print('input max length = %d, number of categories = %d' % (self.max_length, self.num_features))
         print('features\tmin_index\tsize')
         for i in range(len(self.feat_names)):
@@ -367,8 +368,7 @@ class Dataset:
         num_of_batches = int(np.ceil(X.shape[0] / batch_size))
         sample_index = np.arange(X.shape[0])
         if shuffle:
-            for i in range(int(shuffle)):
-                np.random.shuffle(sample_index)
+            np.random.shuffle(sample_index)
         assert X.shape[0] > 0
         for i in range(num_of_batches):
             batch_index = sample_index[batch_size * i: batch_size * (i + 1)]
