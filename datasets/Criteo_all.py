@@ -271,7 +271,7 @@ class Criteo_all(Dataset):
         return DatasetHelper(self, kwargs)
 
     def __iter__(self, gen_type='train', batch_size=None, shuffle_block=False, random_sample=False, split_fields=False,
-                 on_disk=True, squeeze_output=False, **kwargs):
+                 on_disk=True, squeeze_output=True, **kwargs):
         gen_type = gen_type.lower()
 
         if on_disk:

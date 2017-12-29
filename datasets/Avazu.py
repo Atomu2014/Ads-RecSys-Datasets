@@ -41,18 +41,14 @@ class Avazu(Dataset):
             self.feature_to_hdf(num_of_parts=self.train_num_of_parts,
                                 file_prefix='train',
                                 feature_data_dir=self.feature_data_dir,
-                                hdf_data_dir=self.hdf_data_dir,
-                                input_columns=self.feat_names,
-                                output_columns=['click'])
+                                hdf_data_dir=self.hdf_data_dir)
             self.test_num_of_parts = self.raw_to_feature(raw_file='avazu.te.svm',
                                                          input_feat_file='test_input.txt',
                                                          output_feat_file='test_output.txt')
             self.feature_to_hdf(num_of_parts=self.test_num_of_parts,
                                 file_prefix='test',
                                 feature_data_dir=self.feature_data_dir,
-                                hdf_data_dir=self.hdf_data_dir,
-                                input_columns=self.feat_names,
-                                output_columns=['click'])
+                                hdf_data_dir=self.hdf_data_dir)
 
         print('Got hdf Avazu data set, getting metadata...')
         self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \

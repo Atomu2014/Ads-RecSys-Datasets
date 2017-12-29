@@ -73,6 +73,10 @@ class Dataset:
     X_test = None
     y_test = None
 
+    @property
+    def num_fields(self):
+        return self.max_length
+
     def raw_to_feature(self, **kwargs):
         """
         this method should be override
@@ -219,8 +223,8 @@ class Dataset:
         return DatasetHelper(self, kwargs)
 
     def __iter__(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                 random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=True,
-                 squeeze_output=False):
+                 random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=False,
+                 squeeze_output=True):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 

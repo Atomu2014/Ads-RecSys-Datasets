@@ -1,8 +1,6 @@
 import json
 import os
 
-import h5py
-
 from Dataset import Dataset
 
 
@@ -42,6 +40,8 @@ class Criteo(Dataset):
         """
         self.initialized = initialized
         if not self.initialized:
+            import h5py
+
             print('Got raw Criteo 8-day logs, initializing data set...')
             self.max_length = max_length
             self.num_features = num_features
@@ -62,18 +62,14 @@ class Criteo(Dataset):
             self.feature_to_hdf(num_of_parts=self.train_num_of_parts,
                                 file_prefix='train',
                                 feature_data_dir=self.feature_data_dir,
-                                hdf_data_dir=self.hdf_data_dir,
-                                input_columns=self.feat_names,
-                                output_columns=['click'])
+                                hdf_data_dir=self.hdf_data_dir)
             self.test_num_of_parts = self.raw_to_feature(key='test',
                                                          input_feat_file='test_input.txt',
                                                          output_feat_file='test_output.txt')
             self.feature_to_hdf(num_of_parts=self.test_num_of_parts,
                                 file_prefix='test',
                                 feature_data_dir=self.feature_data_dir,
-                                hdf_data_dir=self.hdf_data_dir,
-                                input_columns=self.feat_names,
-                                output_columns=['click'])
+                                hdf_data_dir=self.hdf_data_dir)
         print('Got hdf Criteo-8d data set, getting metadata...')
         self.train_size, self.train_pos_samples, self.train_neg_samples, self.train_pos_ratio = \
             self.bin_count(self.hdf_data_dir, 'train', self.train_num_of_parts)
@@ -93,6 +89,8 @@ class Criteo(Dataset):
         else:
             fin = open(input_feat_file, 'w')
             fout = open(output_feat_file, 'w')
+
+        import h5py
 
         h5file = h5py.File('../../Ads/APEXDatasets/criteo')
         line_no = 0
