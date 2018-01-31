@@ -7,20 +7,20 @@ from .Huawei import Huawei
 from Criteo_all import Criteo_all
 
 
-def as_dataset(data_name, **kwargs):
+def as_dataset(data_name, initialized=True):
     data_name = data_name.lower()
     if data_name == 'criteo':
-        return Criteo(**kwargs)
+        return Criteo(initialized=initialized)
     elif data_name == 'ipinyou':
-        return iPinYou(**kwargs)
+        return iPinYou(initialized=initialized)
     elif data_name == 'avazu':
-        return Avazu(**kwargs)
+        return Avazu(initialized=initialized)
     elif data_name == 'huawei':
-        return Huawei(**kwargs)
+        return Huawei(initialized=initialized)
     elif data_name == 'criteo_9d':
-        return Criteo_all(initialized=kwargs['initialized'], num_of_days=9)
+        return Criteo_all(initialized=initialized, num_of_days=9)
     elif data_name == 'criteo_16d':
-        return Criteo_all(initialized=kwargs['initialized'], num_of_days=16)
+        return Criteo_all(initialized=initialized, num_of_days=16)
 
 
 # def as_temp(data_name, **kwargs):
