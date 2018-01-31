@@ -71,6 +71,13 @@ class Criteo_all(Dataset):
             os.path.join(self.hdf_data_dir, '%s_%s_<>_part_%d.h5' % (self.prefix, self.log_files[-1], j))
             for j in range(self.num_of_parts[-1])]
 
+        self.X_train = None
+        self.y_train = None
+        self.X_valid = None
+        self.y_valid = None
+        self.X_test = None
+        self.y_test = None
+
         if not self.initialized:
             # down sample
             for _f in self.log_files:
@@ -246,51 +253,98 @@ class Criteo_all(Dataset):
         for i in range(self.max_length):
             print('%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i]))
 
-    def _files_iter_(self, gen_type='train', shuffle_block=False, **kwargs):
+    def _files_iter_(self, gen_type='train', shuffle_block=False):
         gen_type = gen_type.lower()
         if gen_type == 'train':
-            if shuffle_block:
-                np.random.shuffle(self.train_hdf_files)
-            for x in self.train_hdf_files:
-                yield x.replace('<>', 'input'), x.replace('<>', 'output')
+            hdf_files = self.train_hdf_files
         elif gen_type == 'valid':
-            if shuffle_block:
-                np.random.shuffle(self.valid_hdf_files)
-            for x in self.valid_hdf_files:
-                yield x.replace('<>', 'input'), x.replace('<>', 'output')
+            hdf_files = self.valid_hdf_files
         elif gen_type == 'test':
-            if shuffle_block:
-                np.random.shuffle(self.test_hdf_files)
-            for x in self.test_hdf_files:
-                yield x.replace('<>', 'input'), x.replace('<>', 'output')
+            hdf_files = self.test_hdf_files
+        if shuffle_block:
+            np.random.shuffle(hdf_files)
+        for x in hdf_files:
+            yield x.replace('<>', 'input'), x.replace('<>', 'output')
 
-    def load_data(self, gen_type='train', num_of_parts=None, random_sample=False, val_ratio=None):
-        print('not implemented')
+    def load_data(self, gen_type='train', num_workers=1, task_index=0):
+        gen_type = gen_type.lower()
+
+        if gen_type == 'train':
+            if self.X_train and self.y_train:
+                return
+            num_of_parts = len(self.train_hdf_files)
+        elif gen_type == 'valid':
+            if self.X_valid and self.y_valid:
+                return
+            num_of_parts = len(self.valid_hdf_files)
+        elif gen_type == 'test':
+            if self.X_test and self.y_test:
+                return
+            num_of_parts = len(self.test_hdf_files)
+
+        X_all = []
+        y_all = []
+        for hdf_in, hdf_out in self._files_iter_(gen_type, False):
+            print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
+            num_lines = pd.HDFStore(hdf_out, mode='r').get_storer('fixed').shape[0]
+            one_piece = int(num_lines / num_workers)
+            start = one_piece * task_index
+            end = one_piece * (task_index + 1)
+            X_block = pd.read_hdf(hdf_in, mode='r', start=start, end=end).as_matrix()
+            y_block = pd.read_hdf(hdf_out, mode='r', start=start, end=end).as_matrix()
+            X_all.append(X_block)
+            y_all.append(y_block)
+        X_all = np.vstack(X_all)
+        y_all = np.vstack(y_all)
+
+        if gen_type == 'train':
+            self.X_train = X_all
+            self.y_train = y_all
+            print('all train data loaded')
+        elif gen_type == 'valid':
+            self.X_valid = X_all
+            self.y_valid = y_all
+            print('all valid data loaded')
+        elif gen_type == 'test':
+            self.X_test = X_all
+            self.y_test = y_all
+            print('all test data loaded')
 
     def batch_generator(self, kwargs):
         return DatasetHelper(self, kwargs)
 
     def __iter__(self, gen_type='train', batch_size=None, shuffle_block=False, random_sample=False, split_fields=False,
-                 on_disk=True, squeeze_output=True, **kwargs):
+                 on_disk=True, squeeze_output=True, num_workers=1, task_index=0, **kwargs):
         gen_type = gen_type.lower()
 
-        if on_disk:
-            print('on disk...')
+        def _iter_():
+            if on_disk:
+                print('on disk...')
+                for hdf_X, hdf_y in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
+                    num_lines = pd.HDFStore(hdf_y, mode='r').get_storer('fixed').shape[0]
+                    one_piece = int(num_lines / num_workers)
+                    start = one_piece * task_index
+                    end = one_piece * (task_index + 1)
+                    X_all = pd.read_hdf(hdf_X, mode='r', start=start, end=end).as_matrix()
+                    y_all = pd.read_hdf(hdf_y, mode='r', start=start, end=end).as_matrix()
+                    yield X_all, y_all, hdf_X
+            else:
+                print('in memory...')
+                self.load_data(gen_type=gen_type, num_workers=num_workers, task_index=task_index)
+                if gen_type == 'train':
+                    yield self.X_train, self.y_train, gen_type
+                elif gen_type == 'valid':
+                    yield self.X_valid, self.y_valid, gen_type
+                elif gen_type == 'test':
+                    yield self.X_test, self.y_test, gen_type
 
-            for hdf_X, hdf_y in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
-                # num_of_lines = pd.HDFStore(hdf_y, mode='r').get_storer('fixed').shape[0]
-
-                X_all = pd.read_hdf(hdf_X, mode='r').as_matrix()
-                y_all = pd.read_hdf(hdf_y, mode='r').as_matrix()
-
-                gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
-                for X, y in gen:
-                    if split_fields:
-                        X = np.split(X, self.max_length, axis=1)
-                        for i in range(self.max_length):
-                            X[i] -= self.feat_min[i]
-                    if squeeze_output:
-                        y = y.squeeze()
-                    yield X, y
-        else:
-            print('not implemented')
+        for X_all, y_all, block in _iter_():
+            gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
+            for X, y in gen:
+                if split_fields:
+                    X = np.split(X, self.max_length, axis=1)
+                    for i in range(self.max_length):
+                        X[i] -= self.feat_min[i]
+                if squeeze_output:
+                    y = y.squeeze()
+                yield X, y

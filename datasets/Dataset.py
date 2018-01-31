@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import os
 
 import numpy as np
@@ -68,8 +69,6 @@ class Dataset:
 
     X_train = None
     y_train = None
-    X_valid = None
-    y_valid = None
     X_test = None
     y_test = None
 
@@ -150,51 +149,42 @@ class Dataset:
         for i in range(len(self.feat_names)):
             print('%s\t%d\t%d' % (self.feat_names[i], self.feat_min[i], self.feat_sizes[i]))
 
-    def _files_iter_(self, gen_type='train', num_of_parts=None, shuffle_block=False):
+    def _files_iter_(self, gen_type='train', shuffle_block=False):
         """
         iterate among hdf files(blocks). when the whole data set is finished, the iterator restarts 
             from the beginning, thus the data stream will never stop
         :param gen_type: could be 'train', 'valid', or 'test'. when gen_type='train' or 'valid', 
             this file iterator will go through the train set
-        :param num_of_parts: 
         :param shuffle_block: shuffle block files at every round
         :return: input_hdf_file_name, output_hdf_file_name, finish_flag
         """
         gen_type = gen_type.lower()
         if gen_type == 'train' or gen_type == 'valid':
-            file_prefix = 'train'
+            hdf_files = [os.path.join(self.hdf_data_dir, 'train_<>_part_%d.h5' % i)
+                         for i in range(self.train_num_of_parts)]
         elif gen_type == 'test':
-            file_prefix = 'test'
-        if num_of_parts == 0:
-            yield os.path.join(self.hdf_data_dir, file_prefix + '_input.h5'), \
-                  os.path.join(self.hdf_data_dir, file_prefix + '_output.h5'),
-        else:
-            if num_of_parts is None:
-                if gen_type == 'train' or gen_type == 'valid':
-                    num_of_parts = self.train_num_of_parts
-                elif gen_type == 'test':
-                    num_of_parts = self.test_num_of_parts
-            parts = np.arange(num_of_parts)
-            if shuffle_block:
-                for i in range(int(shuffle_block)):
-                    np.random.shuffle(parts)
-            for i, p in enumerate(parts):
-                yield os.path.join(self.hdf_data_dir, file_prefix + '_input_part_' + str(p) + '.h5'), \
-                      os.path.join(self.hdf_data_dir, file_prefix + '_output_part_' + str(p) + '.h5'),
+            hdf_files = [os.path.join(self.hdf_data_dir, 'test_<>_part_%d.h5' % i)
+                         for i in range(self.test_num_of_parts)]
+        if shuffle_block:
+            np.random.shuffle(hdf_files)
+        for f in hdf_files:
+            yield f.replace('<>', 'input'), f.replace('<>', 'output')
 
-    def load_data(self, gen_type='train', num_of_parts=None, random_sample=False, val_ratio=None):
-        if val_ratio is None:
-            val_ratio = 0.0
-        if num_of_parts is None:
-            if gen_type == 'train' or gen_type == 'valid':
-                if self.train_num_of_parts is not None:
-                    num_of_parts = self.train_num_of_parts
-            elif gen_type == 'test':
-                if self.test_num_of_parts is not None:
-                    num_of_parts = self.test_num_of_parts
+    def load_data(self, gen_type='train'):
+        gen_type = gen_type.lower()
+
+        if gen_type == 'train' or gen_type == 'valid':
+            if self.X_train and self.y_train:
+                return
+            num_of_parts = self.train_num_of_parts
+        elif gen_type == 'test':
+            if self.X_test and self.y_test:
+                return
+            num_of_parts = self.test_num_of_parts
+
         X_all = []
         y_all = []
-        for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, False):
+        for hdf_in, hdf_out in self._files_iter_(gen_type, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
             X_block = pd.read_hdf(hdf_in, mode='r').as_matrix()
             y_block = pd.read_hdf(hdf_out, mode='r').as_matrix()
@@ -202,17 +192,10 @@ class Dataset:
             y_all.append(y_block)
         X_all = np.vstack(X_all)
         y_all = np.vstack(y_all)
-        if random_sample:
-            idx = np.arange(X_all.shape[0])
-            np.random.shuffle(idx)
-            X_all = X_all[idx]
-            y_all = y_all[idx]
+
         if gen_type == 'train' or gen_type == 'valid':
-            sep = int(X_all.shape[0] * val_ratio)
-            self.X_valid = X_all[:sep]
-            self.y_valid = y_all[:sep]
-            self.X_train = X_all[sep:]
-            self.y_train = y_all[sep:]
+            self.X_train = X_all
+            self.y_train = y_all
             print('all train/valid data loaded')
         elif gen_type == 'test':
             self.X_test = X_all
@@ -222,104 +205,55 @@ class Dataset:
     def batch_generator(self, kwargs):
         return DatasetHelper(self, kwargs)
 
-    def __iter__(self, gen_type='train', batch_size=None, pos_ratio=None, num_of_parts=None, val_ratio=None,
-                 random_sample=False, shuffle_block=False, split_fields=False, on_disk=True, split_pos_neg=False,
-                 squeeze_output=True):
+    def __iter__(self, gen_type='train', batch_size=None, pos_ratio=None, val_ratio=0.0, shuffle_block=False,
+                 random_sample=False, split_fields=False, on_disk=True, squeeze_output=True):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
         :param pos_ratio: default value is decided by the dataset, which means you don't want to change is
-        :param num_of_parts: 
         :param val_ratio: fraction of valid set from train set
         :param random_sample: if True, will shuffle
         :param shuffle_block: shuffle file blocks at every round
         :param split_fields: if True, returned values will be independently indexed, else using unified index
         :param on_disk: if true iterate on disk, random_sample in block, if false iterate in mem, random_sample on all data
-        :param split_pos_neg: if true every block will be split into pos and neg, every batch is a mixture of the two
         :return: 
         """
-        if batch_size is None:
-            batch_size = max(int(1 / self.train_pos_ratio), int(1 / self.test_pos_ratio)) + 1
-        if val_ratio is None:
-            val_ratio = 0.0
         gen_type = gen_type.lower()
-        if num_of_parts is None:
-            if gen_type == 'train' or gen_type == 'valid':
-                if self.train_num_of_parts is not None:
-                    num_of_parts = self.train_num_of_parts
-            elif gen_type == 'test':
-                if self.test_num_of_parts is not None:
-                    num_of_parts = self.test_num_of_parts
-        if on_disk:
-            print('on disk...')
-            for hdf_in, hdf_out in self._files_iter_(gen_type, num_of_parts, shuffle_block):
-                number_of_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
 
-                if gen_type == 'train':
-                    start = int(number_of_lines * val_ratio)
-                    stop = None
-                elif gen_type == 'valid':
-                    start = None
-                    stop = int(number_of_lines * val_ratio)
-                else:
-                    start = stop = None
-                X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
-                y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
+        def _iter_():
+            if on_disk:
+                print('on disk...')
+                for hdf_in, hdf_out in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
+                    number_of_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
+                    if gen_type == 'train':
+                        start = int(number_of_lines * val_ratio)
+                        stop = None
+                    elif gen_type == 'valid':
+                        start = None
+                        stop = int(number_of_lines * val_ratio)
+                    else:
+                        start = stop = None
+                    X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+                    y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
+                    yield X_all, y_all, hdf_in
+            else:
+                print('in mem...')
+                self.load_data(gen_type=gen_type)
+                if gen_type == 'train' or gen_type == 'valid':
+                    sep = int(len(self.X_train) * val_ratio)
+                    if gen_type == 'train':
+                        X_all = self.X_train[:sep]
+                        y_all = self.y_train[:sep]
+                    else:
+                        X_all = self.X_train[sep:]
+                        y_all = self.y_train[sep:]
+                elif gen_type == 'test':
+                    X_all = self.X_test
+                    y_all = self.y_test
+                yield X_all, y_all, 'all'
 
-                if split_pos_neg:
-                    X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
-                    number_of_pos = X_pos.shape[0]
-                    number_of_neg = X_neg.shape[0]
-                    if pos_ratio is None:
-                        pos_ratio = 1.0 * number_of_pos / (number_of_pos + number_of_neg)
-                    if number_of_pos <= 0 or number_of_neg <= 0:
-                        raise Exception('Invalid partition')
-                    pos_batchsize = int(batch_size * pos_ratio)
-                    neg_batchsize = batch_size - pos_batchsize
-                    if pos_batchsize <= 0 or neg_batchsize <= 0:
-                        raise Exception('Invalid positive ratio.')
-                    pos_gen = self.generator(X_pos, y_pos, pos_batchsize, shuffle=random_sample)
-                    neg_gen = self.generator(X_neg, y_neg, neg_batchsize, shuffle=random_sample)
-                    while True:
-                        try:
-                            pos_X, pos_y = pos_gen.next()
-                            neg_X, neg_y = neg_gen.next()
-                            X = np.append(pos_X, neg_X, axis=0)
-                            y = np.append(pos_y, neg_y, axis=0)
-                            if split_fields:
-                                X = np.split(X, self.max_length, axis=1)
-                                for i in range(self.max_length):
-                                    X[i] -= self.feat_min[i]
-                            if squeeze_output:
-                                y = y.squeeze()
-                            yield X, y
-                        except StopIteration, e:
-                            print('finish block', hdf_in)
-                            break
-                else:
-                    gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
-                    for X, y in gen:
-                        if split_fields:
-                            X = np.split(X, self.max_length, axis=1)
-                            for i in range(self.max_length):
-                                X[i] -= self.feat_min[i]
-                        if squeeze_output:
-                            y = y.squeeze()
-                        yield X, y
-        else:
-            print('in mem...')
-            self.load_data(gen_type, num_of_parts, random_sample, val_ratio)
-            if gen_type == 'train':
-                X_all = self.X_train
-                y_all = self.y_train
-            elif gen_type == 'valid':
-                X_all = self.X_valid
-                y_all = self.y_valid
-            elif gen_type == 'test':
-                X_all = self.X_test
-                y_all = self.y_test
-
-            if split_pos_neg:
+        for X_all, y_all, block in _iter_():
+            if pos_ratio:
                 X_pos, y_pos, X_neg, y_neg = self.split_pos_neg(X_all, y_all)
                 number_of_pos = X_pos.shape[0]
                 number_of_neg = X_neg.shape[0]
@@ -347,6 +281,7 @@ class Dataset:
                             y = y.squeeze()
                         yield X, y
                     except StopIteration, e:
+                        print('finish', block)
                         break
             else:
                 gen = self.generator(X_all, y_all, batch_size, shuffle=random_sample)
