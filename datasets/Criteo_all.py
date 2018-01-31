@@ -58,6 +58,9 @@ class Criteo_all(Dataset):
         else:
             print('invalid setting! num_of_days should be 9 or 16')
             exit(0)
+        self.train_size = sum(self.file_sizes[:-2])
+        self.valid_size = self.file_sizes[-2]
+        self.test_size = self.file_sizes[-1]
 
         self.train_hdf_files = []
         for i in range(self.num_of_days - 2):

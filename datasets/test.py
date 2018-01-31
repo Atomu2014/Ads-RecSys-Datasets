@@ -2,6 +2,23 @@ from __future__ import print_function
 
 import time
 
+from iPinYou import iPinYou
+
+dataset = iPinYou(True)
+train_gen = dataset.batch_generator({
+    'gen_type': 'test',
+    'random_sample': False,
+    'batch_size': 20000,
+})
+
+cnt = 0
+for x, y in train_gen:
+    cnt += 1
+    print(x.shape)
+    print(y)
+
+exit(0)
+
 
 # class A:
 #     def __init__(self, b, kwargs):
