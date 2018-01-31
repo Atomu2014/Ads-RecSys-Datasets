@@ -17,8 +17,10 @@ def as_dataset(data_name, **kwargs):
         return Avazu(**kwargs)
     elif data_name == 'huawei':
         return Huawei(**kwargs)
-    elif data_name == 'criteo-all':
-        return Criteo_all(**kwargs)
+    elif data_name == 'criteo_9d':
+        return Criteo_all(initialized=kwargs['initialized'], num_of_days=9)
+    elif data_name == 'criteo_16d':
+        return Criteo_all(initialized=kwargs['initialized'], num_of_days=16)
 
 
 # def as_temp(data_name, **kwargs):
