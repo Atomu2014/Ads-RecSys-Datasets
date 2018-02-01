@@ -16,7 +16,8 @@ class iPinYou(Dataset):
     train_pos_ratio = 0
     test_pos_ratio = 0
     initialized = 0
-    max_length = 16
+    num_fields = 16
+    max_length = num_fields
     num_features = 937670
     feat_names = ['weekday', 'hour', 'IP', 'region', 'city', 'adexchange', 'domain',
                   'slotid', 'slotwidth', 'slotheight', 'slotvisibility', 'slotformat',

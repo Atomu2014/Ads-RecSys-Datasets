@@ -19,6 +19,10 @@ class DatasetHelper:
     def batch_size(self):
         return self.kwargs['batch_size']
 
+    @property
+    def gen_type(self):
+        return self.kwargs['gen_type']
+
 
 class Dataset:
     """
@@ -59,6 +63,7 @@ class Dataset:
     test_pos_ratio = 0
     initialized = 0
     max_length = 0
+    num_fields = 0
     num_features = 0
     feat_names = None
     feat_min = None
@@ -71,10 +76,6 @@ class Dataset:
     y_train = None
     X_test = None
     y_test = None
-
-    @property
-    def num_fields(self):
-        return self.max_length
 
     def raw_to_feature(self, **kwargs):
         """
@@ -96,14 +97,10 @@ class Dataset:
         """
         print('Transferring feature', file_prefix, 'data into hdf data and save hdf', file_prefix, 'data...')
         for idx in range(num_of_parts):
-            _X = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_input.txt.part_' + str(idx)),
+            _X = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_input.part_' + str(idx)),
                              dtype=np.int32, delimiter=' ', header=None)
-            _y = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_output.txt.part_' + str(idx)),
+            _y = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_output.part_' + str(idx)),
                              dtype=np.int32, delimiter=' ', header=None)
-            # _X = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_part_' + str(idx) + '.input'),
-            #                  dtype=np.int32, delimiter=' ', header=None)
-            # _y = pd.read_csv(os.path.join(feature_data_dir, file_prefix + '_part_' + str(idx) + '.output'),
-            #                  dtype=np.int32, delimiter=' ', header=None)
             _X.to_hdf(os.path.join(hdf_data_dir, file_prefix + '_input_part_' + str(idx) + '.h5'), 'fixed')
             _y.to_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(idx) + '.h5'), 'fixed')
             print('part:', idx, _X.shape, _y.shape)

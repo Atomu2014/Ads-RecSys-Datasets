@@ -15,7 +15,8 @@ class Criteo_all(Dataset):
     num_of_days = 9
     log_files = None
     initialized = True
-    max_length = 39
+    num_fields = 39
+    max_length = num_fields
     feat_names = ['num_%d' % i for i in range(13)]
     feat_names.extend(['cat_%d' % i for i in range(26)])
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'Criteo-all')

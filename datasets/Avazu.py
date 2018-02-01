@@ -16,7 +16,8 @@ class Avazu(Dataset):
     train_pos_ratio = 0
     test_pos_ratio = 0
     initialized = 0
-    max_length = 24
+    num_fields = 24
+    max_length = num_fields
     num_features = 645195
     feat_names = ['C1', 'banner_pos', 'site_id', 'site_domain', 'site_category', 'app_id', 'app_domain', 'app_category',
                   'device_id', 'device_ip', 'device_model', 'device_type', 'device_conn_type', 'C14', 'C15', 'C16',

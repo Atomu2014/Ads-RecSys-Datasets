@@ -17,7 +17,8 @@ class Criteo(Dataset):
     train_pos_ratio = 0
     test_pos_ratio = 0
     initialized = 0
-    max_length = 39
+    num_fields = 39
+    max_length = num_fields
     num_features = 1178909
     feat_names = ['num_%d' % i for i in range(13)]
     feat_names.extend(['cat_%d' % i for i in range(26)])
