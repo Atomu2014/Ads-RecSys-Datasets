@@ -2,20 +2,41 @@ from __future__ import print_function
 
 import time
 
+from Criteo_Challenge import Criteo_Challenge
+
+dataset = Criteo_Challenge(False)
+exit(0)
+
+
 from iPinYou import iPinYou
 
 dataset = iPinYou(True)
-train_gen = dataset.batch_generator({
+print('total size', dataset.test_size)
+param = {
     'gen_type': 'test',
     'random_sample': False,
-    'batch_size': 20000,
-})
+    'batch_size': 1000,
+    'num_workers': 2,
+    'task_index': 0,
+}
+test_gen = dataset.batch_generator(param)
 
 cnt = 0
-for x, y in train_gen:
-    cnt += 1
-    print(x.shape)
-    print(y)
+for x, y in test_gen:
+    if not cnt:
+        print(x)
+    cnt += x.shape[0]
+print('worker0 read', cnt)
+
+param['task_index'] = 1
+test_gen = dataset.batch_generator(param)
+
+cnt = 0
+for x, y in test_gen:
+    if not cnt:
+        print(x)
+    cnt += x.shape[0]
+print('worker1 read', cnt)
 
 exit(0)
 

@@ -291,11 +291,11 @@ class Criteo_all(Dataset):
         for hdf_in, hdf_out in self._files_iter_(gen_type, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
             num_lines = pd.HDFStore(hdf_out, mode='r').get_storer('fixed').shape[0]
-            one_piece = int(num_lines / num_workers)
+            one_piece = int(np.ceil(num_lines / num_workers))
             start = one_piece * task_index
-            end = one_piece * (task_index + 1)
-            X_block = pd.read_hdf(hdf_in, mode='r', start=start, end=end).as_matrix()
-            y_block = pd.read_hdf(hdf_out, mode='r', start=start, end=end).as_matrix()
+            stop = one_piece * (task_index + 1)
+            X_block = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+            y_block = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
             X_all.append(X_block)
             y_all.append(y_block)
         X_all = np.vstack(X_all)
@@ -326,11 +326,11 @@ class Criteo_all(Dataset):
                 print('on disk...')
                 for hdf_X, hdf_y in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
                     num_lines = pd.HDFStore(hdf_y, mode='r').get_storer('fixed').shape[0]
-                    one_piece = int(num_lines / num_workers)
+                    one_piece = int(np.ceil(num_lines / num_workers))
                     start = one_piece * task_index
-                    end = one_piece * (task_index + 1)
-                    X_all = pd.read_hdf(hdf_X, mode='r', start=start, end=end).as_matrix()
-                    y_all = pd.read_hdf(hdf_y, mode='r', start=start, end=end).as_matrix()
+                    stop = one_piece * (task_index + 1)
+                    X_all = pd.read_hdf(hdf_X, mode='r', start=start, stop=stop).as_matrix()
+                    y_all = pd.read_hdf(hdf_y, mode='r', start=start, stop=stop).as_matrix()
                     yield X_all, y_all, hdf_X
             else:
                 print('in memory...')

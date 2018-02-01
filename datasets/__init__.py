@@ -5,6 +5,7 @@ from .Huawei import Huawei
 # from .Avazu_temp import Avazu_temp
 # from .iPinYousyf import iPinYousyf
 from Criteo_all import Criteo_all
+from Criteo_Challenge import Criteo_Challenge
 
 
 def as_dataset(data_name, initialized=True):
@@ -21,6 +22,8 @@ def as_dataset(data_name, initialized=True):
         return Criteo_all(initialized=initialized, num_of_days=9)
     elif data_name == 'criteo_16d':
         return Criteo_all(initialized=initialized, num_of_days=16)
+    elif data_name == 'criteo_challenge':
+        return Criteo_Challenge(initialized=initialized)
 
 
 # def as_temp(data_name, **kwargs):

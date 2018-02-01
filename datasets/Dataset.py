@@ -167,7 +167,7 @@ class Dataset:
         for f in hdf_files:
             yield f.replace('<>', 'input'), f.replace('<>', 'output')
 
-    def load_data(self, gen_type='train'):
+    def load_data(self, gen_type='train', num_workers=1, task_index=0):
         gen_type = gen_type.lower()
 
         if gen_type == 'train' or gen_type == 'valid':
@@ -183,8 +183,12 @@ class Dataset:
         y_all = []
         for hdf_in, hdf_out in self._files_iter_(gen_type, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
-            X_block = pd.read_hdf(hdf_in, mode='r').as_matrix()
-            y_block = pd.read_hdf(hdf_out, mode='r').as_matrix()
+            num_lines = pd.HDFStore(hdf_out, mode='r').get_storer('fixed').shape[0]
+            one_piece = int(np.ceil(num_lines / num_workers))
+            start = one_piece * task_index
+            stop = one_piece * (task_index + 1)
+            X_block = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+            y_block = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
             X_all.append(X_block)
             y_all.append(y_block)
         X_all = np.vstack(X_all)
@@ -203,7 +207,8 @@ class Dataset:
         return DatasetHelper(self, kwargs)
 
     def __iter__(self, gen_type='train', batch_size=None, pos_ratio=None, val_ratio=0.0, shuffle_block=False,
-                 random_sample=False, split_fields=False, on_disk=True, squeeze_output=True):
+                 random_sample=False, split_fields=False, on_disk=True, squeeze_output=True, num_workers=1,
+                 task_index=0):
         """
         :param gen_type: 'train', 'valid', or 'test'.  the valid set is partitioned from train set dynamically
         :param batch_size: 
@@ -221,21 +226,25 @@ class Dataset:
             if on_disk:
                 print('on disk...')
                 for hdf_in, hdf_out in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
-                    number_of_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
+                    num_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
                     if gen_type == 'train':
-                        start = int(number_of_lines * val_ratio)
-                        stop = None
+                        start = int(num_lines * val_ratio)
+                        stop = num_lines
                     elif gen_type == 'valid':
-                        start = None
-                        stop = int(number_of_lines * val_ratio)
+                        start = 0
+                        stop = int(num_lines * val_ratio)
                     else:
-                        start = stop = None
+                        start = 0
+                        stop = num_lines
+                    one_piece = int(np.ceil((stop - start)/ num_workers))
+                    start = start + one_piece * task_index
+                    stop = start + one_piece * (task_index + 1)
                     X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
                     y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
                     yield X_all, y_all, hdf_in
             else:
                 print('in mem...')
-                self.load_data(gen_type=gen_type)
+                self.load_data(gen_type=gen_type, num_workers=num_workers, task_index=task_index)
                 if gen_type == 'train' or gen_type == 'valid':
                     sep = int(len(self.X_train) * val_ratio)
                     if gen_type == 'train':
@@ -301,7 +310,7 @@ class Dataset:
         :param shuffle: 
         :return: 
         """
-        num_of_batches = int(np.ceil(X.shape[0] / batch_size))
+        num_of_batches = int(np.ceil(X.shape[0] * 1.0 / batch_size))
         sample_index = np.arange(X.shape[0])
         if shuffle:
             np.random.shuffle(sample_index)
