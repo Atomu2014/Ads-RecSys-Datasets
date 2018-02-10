@@ -31,6 +31,8 @@ class Criteo_Challenge(Dataset):
     raw_data_dir = os.path.join(data_dir, 'raw')
     feature_data_dir = os.path.join(data_dir, 'feature')
     hdf_data_dir = os.path.join(data_dir, 'hdf')
+    train_size = 47681234
+    test_size = 6084270
 
     def __init__(self, initialized=True):
         self.initialized = initialized
