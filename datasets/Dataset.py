@@ -23,6 +23,10 @@ class DatasetHelper:
     def gen_type(self):
         return self.kwargs['gen_type']
 
+    @property
+    def val_ratio(self):
+        return self.kwargs['val_ratio']
+
 
 class Dataset:
     """
