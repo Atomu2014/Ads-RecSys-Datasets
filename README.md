@@ -1,6 +1,6 @@
 # Ads-RecSys-Datasets
 This repository collects some datasets for Ads &amp; RecSys uses, and provide easy-to-use hdf5 iterative access.
-The datasets are `iPinYou`, `Criteo`, `MovieLens`, `NetFlix`, and `Yahoo Music`.
+The datasets are `iPinYou`, `Criteo`, `Avazu`, `Criteo_Challenge`, `MovieLens`, `NetFlix`, and `Yahoo Music`.
 This repository is to introduce a more standard feature engineering, mainly focus on `multi-field categorical data`, or even `multi-value data` (or `set data`).
 The hdf5 interfaces are developed by @xueyuan zhao, the easy-access-on-NAS is contributed by @tianyao chen, and @weinan zhang, @try-skycn, @minzheniu, @kevinkune make contributions to feature engineering.
 This repository will be long-term maintained.
