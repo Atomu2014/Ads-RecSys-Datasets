@@ -105,6 +105,14 @@ The train/test sets are partitioned by us. We use one week data to train, and fo
 `train set size: 86M`, `test set size: 12M`.
 `Positive sample ratio` is `0.50` on train set, and `0.49` on test set.
 
+### Avazu
+
+already done, need to update
+
+### Criteo Challenge
+
+already done, need to update
+
 ### MovieLens
 
 already done, need to update
