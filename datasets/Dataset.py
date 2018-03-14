@@ -122,12 +122,14 @@ class Dataset:
         num_of_pos = 0
         num_of_neg = 0
         for part in range(num_of_parts):
-            _y = pd.read_hdf(os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5'), mode='r')
-            part_pos_num = _y.loc[_y.iloc[:, 0] == 1].shape[0]
-            part_neg_num = _y.shape[0] - part_pos_num
-            size += _y.shape[0]
-            num_of_pos += part_pos_num
-            num_of_neg += part_neg_num
+            hdf_y = os.path.join(hdf_data_dir, file_prefix + '_output_part_' + str(part) + '.h5')
+            with pd.HDFStore(hdf_y, mode='r') as hdf_y:
+                _y = pd.read_hdf(hdf_y)
+                part_pos_num = _y.loc[_y.iloc[:, 0] == 1].shape[0]
+                part_neg_num = _y.shape[0] - part_pos_num
+                size += _y.shape[0]
+                num_of_pos += part_pos_num
+                num_of_neg += part_neg_num
         pos_ratio = 1.0 * num_of_pos / (num_of_pos + num_of_neg)
         return size, num_of_pos, num_of_neg, pos_ratio
 
@@ -187,14 +189,15 @@ class Dataset:
         y_all = []
         for hdf_in, hdf_out in self._files_iter_(gen_type, False):
             print(hdf_in.split('/')[-1], '/', num_of_parts, 'loaded')
-            num_lines = pd.HDFStore(hdf_out, mode='r').get_storer('fixed').shape[0]
-            one_piece = int(np.ceil(num_lines / num_workers))
-            start = one_piece * task_index
-            stop = one_piece * (task_index + 1)
-            X_block = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
-            y_block = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
-            X_all.append(X_block)
-            y_all.append(y_block)
+            with pd.HDFStore(hdf_in, mode='r') as hdf_in, pd.HDFStore(hdf_out, mode='r') as hdf_out:
+                num_lines = hdf_out.get_storer('fixed').shape[0]
+                one_piece = int(np.ceil(num_lines / num_workers))
+                start = one_piece * task_index
+                stop = one_piece * (task_index + 1)
+                X_block = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+                y_block = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
+                X_all.append(X_block)
+                y_all.append(y_block)
         X_all = np.vstack(X_all)
         y_all = np.vstack(y_all)
 
@@ -230,22 +233,23 @@ class Dataset:
             if on_disk:
                 print('on disk...')
                 for hdf_in, hdf_out in self._files_iter_(gen_type=gen_type, shuffle_block=shuffle_block):
-                    num_lines = pd.HDFStore(hdf_in, mode='r').get_storer('fixed').shape[0]
-                    if gen_type == 'train':
-                        start = int(num_lines * val_ratio)
-                        stop = num_lines
-                    elif gen_type == 'valid':
-                        start = 0
-                        stop = int(num_lines * val_ratio)
-                    else:
-                        start = 0
-                        stop = num_lines
-                    one_piece = int(np.ceil((stop - start)/ num_workers))
-                    start = start + one_piece * task_index
-                    stop = start + one_piece * (task_index + 1)
-                    X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
-                    y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
-                    yield X_all, y_all, hdf_in
+                    with pd.HDFStore(hdf_in, mode='r') as hdf_in, pd.HDFStore(hdf_out, mode='r') as hdf_out:
+                        num_lines = hdf_in.get_storer('fixed').shape[0]
+                        if gen_type == 'train':
+                            start = int(num_lines * val_ratio)
+                            stop = num_lines
+                        elif gen_type == 'valid':
+                            start = 0
+                            stop = int(num_lines * val_ratio)
+                        else:
+                            start = 0
+                            stop = num_lines
+                        one_piece = int(np.ceil((stop - start)/ num_workers))
+                        start = start + one_piece * task_index
+                        stop = start + one_piece * (task_index + 1)
+                        X_all = pd.read_hdf(hdf_in, mode='r', start=start, stop=stop).as_matrix()
+                        y_all = pd.read_hdf(hdf_out, mode='r', start=start, stop=stop).as_matrix()
+                        yield X_all, y_all, hdf_in
             else:
                 print('in mem...')
                 self.load_data(gen_type=gen_type, num_workers=num_workers, task_index=task_index)
