@@ -6,7 +6,8 @@ The hdf5 interfaces are developed by @xueyuan zhao, the easy-access-on-NAS is co
 This repository will be long-term maintained.
 
 ## Download
-http://cloud.apexlab.org/s/caxY252qFxAIxe4
+
+https://pan.baidu.com/s/1lpBe4oM-V64YX2suafpLAQ
 
 ## Basic Usage
 This repository is located at /NAS/Dataset.
@@ -107,20 +108,8 @@ The train/test sets are partitioned by us. We use one week data to train, and fo
 
 ### Avazu
 
-already done, need to update
+The raw dataset can be downloaded from https://www.kaggle.com/c/avazu-ctr-prediction/data.
 
 ### Criteo Challenge
 
-already done, need to update
-
-### MovieLens
-
-already done, need to update
-
-### NetFlix
-
-already done, need to update
-
-### Yahoo Music
-
-already done, need to update
+We follow the data processing of https://github.com/guestwalk/kaggle-2014-criteo (master branch), and convert the features into hdf format directly.
