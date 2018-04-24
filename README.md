@@ -1,8 +1,8 @@
 # Ads-RecSys-Datasets
-This repository collects some datasets for Ads &amp; RecSys uses, and provide easy-to-use hdf5 iterative access.
-The datasets are `iPinYou`, `Criteo`, `Avazu`, `Criteo_Challenge`, `MovieLens`, `NetFlix`, and `Yahoo Music`.
-This repository is to introduce a more standard feature engineering, mainly focus on `multi-field categorical data`, or even `multi-value data` (or `set data`).
-The hdf5 interfaces are developed by @xueyuan zhao, the easy-access-on-NAS is contributed by @tianyao chen, and @weinan zhang, @try-skycn, @minzheniu, @kevinkune make contributions to feature engineering.
+This repository is for private use in APEX Lab via NAS, which collects some datasets for Ads &amp; RecSys uses, and provide easy-to-use hdf5 interface.
+The datasets are `iPinYou`, `Criteo`, `Avazu`, `Criteo_Challenge`.
+The input data is in a `multi-field categorical` format, and the output data is binary.
+The hdf5 interfaces are developed by @xueyuan zhao, the easy-access-on-NAS is contributed by @tianyao chen, and @weinan zhang, @try-skycn, @kevinkune make contributions to feature engineering.
 This repository will be long-term maintained.
 
 ## Download
@@ -10,9 +10,7 @@ This repository will be long-term maintained.
 https://pan.baidu.com/s/1lpBe4oM-V64YX2suafpLAQ
 
 ## Basic Usage
-This repository is located at /NAS/Dataset.
-  
-    sudo mount -t nfs 172.16.2.30:/mnt/NAS/Dataset/Ads-RecSys-Datasets /your/local/path
+If you can access NAS of APEX Lab, you can use the interface and access the data from ``/newNAS/Datasets/MLGroup/Ads-RecSys-Datasets``. See guides about `NAS`.
 
 Then you can import this repository in python directly:
 
@@ -24,9 +22,9 @@ Then you can import this repository in python directly:
     data.summary()
     train_gen = data.batch_generator('train')
     
-Or if you want your code run on local/remote machines without change:
+We suggest to configure path in `__init__.py`. For example:
     
-    # create __init__.py
+    # in __init__.py
     import getpass
 
     config = {}
@@ -40,7 +38,7 @@ Or if you want your code run on local/remote machines without change:
     else:
         config['env'] = 'gpu'
         
-    # when using
+    # when use, e.g., in run.py
     import __init__
     if __init__.config['env'] == 'cpu':
         sys.path.append('/your/local/path')
