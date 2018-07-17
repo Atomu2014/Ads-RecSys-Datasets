@@ -7,7 +7,7 @@ This repository will be long-term maintained.
 
 ## Download
 
-https://pan.baidu.com/s/1lpBe4oM-V64YX2suafpLAQ
+https://pan.baidu.com/s/1usnQtW-YodlPUQ1TNrrafw
 
 ## Basic Usage
 If you can access NAS of APEX Lab, you can use the interface and access the data from ``/newNAS/Datasets/MLGroup/Ads-RecSys-Datasets``. See guides about `NAS`.
