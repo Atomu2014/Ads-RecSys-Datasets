@@ -294,7 +294,7 @@ class Dataset:
                         if squeeze_output:
                             y = y.squeeze()
                         yield X, y
-                    except StopIteration, e:
+                    except StopIteration:
                         print('finish', block)
                         break
             else:

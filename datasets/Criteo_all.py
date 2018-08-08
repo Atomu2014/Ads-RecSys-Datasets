@@ -1,13 +1,17 @@
 from __future__ import division
 from __future__ import print_function
 
-import cPickle as pkl
+import sys
+if sys.version.startswith('2'):
+    import cPickle as pkl
+else:
+    import pickle as pkl
 import os
 
 import numpy as np
 import pandas as pd
 
-from Dataset import Dataset, DatasetHelper
+from .Dataset import Dataset, DatasetHelper
 
 
 class Criteo_all(Dataset):

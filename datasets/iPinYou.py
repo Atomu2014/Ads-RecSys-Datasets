@@ -1,6 +1,6 @@
 import os
 
-from Dataset import Dataset
+from .Dataset import Dataset
 
 
 class iPinYou(Dataset):
@@ -26,7 +26,7 @@ class iPinYou(Dataset):
                 937623, 937664]
     feat_max = [7, 32, 704997, 705033, 705404, 705410, 756731, 937426, 937448, 937463, 937475, 937480, 937612, 937622,
                 937663, 937669]
-    feat_sizes = [feat_max[i] - feat_min[i] + 1 for i in range(max_length)]
+    feat_sizes = [8, 25, 704965, 36, 371, 6, 51321, 180695, 22, 15, 12, 5, 132, 10, 41, 6]
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'iPinYou-all')
     raw_data_dir = os.path.join(data_dir, 'raw')
     feature_data_dir = os.path.join(data_dir, 'feature')

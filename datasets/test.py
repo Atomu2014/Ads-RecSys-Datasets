@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import time
 
-from Criteo_Challenge import Criteo_Challenge
+from .Criteo_Challenge import Criteo_Challenge
 
 dataset = Criteo_Challenge(False)
 exit(0)

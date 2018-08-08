@@ -1,10 +1,14 @@
 from __future__ import division
 from __future__ import print_function
 
-import cPickle as pkl
+import sys
+if sys.version.startswith('2'):
+    import cPickle as pkl
+else:
+    import pickle as pkl
 import os
 
-from Dataset import Dataset
+from .Dataset import Dataset
 
 
 class Criteo_Challenge(Dataset):

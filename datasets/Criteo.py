@@ -1,7 +1,7 @@
 import json
 import os
 
-from Dataset import Dataset
+from .Dataset import Dataset
 
 
 class Criteo(Dataset):
@@ -25,7 +25,9 @@ class Criteo(Dataset):
     feat_sizes = [4389, 8000, 329, 7432, 2646, 428, 233, 6301, 295, 11, 173, 176642,
                   585, 147117, 19845, 14830, 6916, 18687, 4, 6646, 1272, 46, 141085, 64381,
                   63692, 11, 2156, 7806, 61, 5, 928, 15, 147387, 116331, 145634, 57186, 9307, 63, 34]
-    feat_min = [sum(feat_sizes[:i]) for i in range(max_length)]
+    feat_min = [0, 4389, 12389, 12718, 20150, 22796, 23224, 23457, 29758, 30053, 30064, 30237, 206879, 207464, 354581,
+                374426, 389256, 396172, 414859, 414863, 421509, 422781, 422827, 563912, 628293, 691985, 691996, 694152,
+                701958, 702019, 702024, 702952, 702967, 850354, 966685, 1112319, 1169505, 1178812, 1178875]
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'Criteo-8d')
     raw_data_dir = os.path.join(data_dir, 'raw')
     feature_data_dir = os.path.join(data_dir, 'feature')

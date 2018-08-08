@@ -1,6 +1,6 @@
 import os
 
-from Dataset import Dataset
+from .Dataset import Dataset
 
 
 class Avazu(Dataset):
@@ -24,7 +24,8 @@ class Avazu(Dataset):
                   'C17', 'C18', 'C19', 'C20', 'C21', 'mday', 'hour', 'wday']
     feat_sizes = [7, 7, 3135, 3487, 24, 4002, 252, 28, 101449, 523672, 5925, 5, 4, 2417, 8, 9, 426, 4, 67, 166, 60, 10,
                   24, 7]
-    feat_min = [sum(feat_sizes[:i]) for i in range(max_length)]
+    feat_min = [0, 7, 14, 3149, 6636, 6660, 10662, 10914, 10942, 112391, 636063, 641988, 641993, 641997, 644414,
+                644422, 644431, 644857, 644861, 644928, 645094, 645154, 645164, 645188]
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'Avazu')
     raw_data_dir = os.path.join(data_dir, 'raw')
     feature_data_dir = os.path.join(data_dir, 'feature')
