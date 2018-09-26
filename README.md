@@ -6,6 +6,7 @@ The hdf5 interfaces are developed by @xueyuan zhao, the easy-access-on-NAS is co
 This repository will be long-term maintained.
 
 ## Download
+``Note``: if the tar files end with .partx, you should cat all the .partx files togather and uncompress it. 
 
 https://pan.baidu.com/s/1usnQtW-YodlPUQ1TNrrafw
 
