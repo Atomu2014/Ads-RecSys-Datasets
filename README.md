@@ -9,6 +9,8 @@ This repository will be long-term maintained.
 ``Note``: if the tar files end with .partx, you should cat all the .partx files togather and uncompress it. 
 
 https://pan.baidu.com/s/1usnQtW-YodlPUQ1TNrrafw
+or
+https://drive.google.com/drive/folders/1thXezQbmuS6Q8-AXmrhB0tLM3mybJxVR?usp=sharing
 
 ## Basic Usage
 If you can access NAS of APEX Lab, you can use the interface and access the data from ``/newNAS/Datasets/MLGroup/Ads-RecSys-Datasets``. See guides about `NAS`.
