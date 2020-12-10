@@ -114,3 +114,5 @@ The raw dataset can be downloaded from https://www.kaggle.com/c/avazu-ctr-predic
 ### Criteo Challenge
 
 We follow the data processing of https://github.com/guestwalk/kaggle-2014-criteo (master branch), and convert the features into hdf format directly.
+
+**update** original log download link: https://ailab.criteo.com/download-criteo-1tb-click-logs-dataset/
